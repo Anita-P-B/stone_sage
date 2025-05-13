@@ -1,0 +1,22 @@
+# Folders to ignore
+data/
+cinder_core/
+experiments/
+sweeps/
+samples/
+__pycache__/
+*.egg-info/
+
+# Compiled files
+*.py[cod]
+
+# IDEs
+.vscode/
+.idea/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+
+
