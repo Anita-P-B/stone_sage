@@ -9,19 +9,27 @@ from stone_sage.utils.utils import update_configs_with_dict
 from stone_sage.datasets.data_loader import load_or_download_data
 
 class DataExplorer:
-    def __init__(self, user_configs = None):
+    def __init__(self, user_configs = None, df=None, label="full", data_path = None):
         # set configs
         self.static_configs = Config()
         self.configs = update_configs_with_dict(self.static_configs, user_configs or {})
-        self.df = load_or_download_data(
-        path=self.configs.DATA_PATH,
-        force_download=self.configs.FORCE_DOWNLOAD,
-        expected_checksum=self.configs.CHECKSUM,
-        debug = self.configs.DEBUG
-    )
+        # get dataset DataFrame
+        if df is not None:
+            self.df = df
+        else:
+            self.df = load_or_download_data(
+            path=self.configs.DATA_PATH,
+            force_download=self.configs.FORCE_DOWNLOAD,
+            expected_checksum=self.configs.CHECKSUM,
+            debug = self.configs.DEBUG
+                                   )
+        self.label = label
         self.numeric_columns = self.df.select_dtypes(include=['number']).columns
-        self.stats_dir = os.path.join(os.path.dirname(self.configs.DATA_PATH), "statistics")
+        self.data_path = data_path if data_path is not None else self.configs.DATA_PATH
+        self.stats_dir = os.path.join(os.path.dirname(self.data_path), "statistics")
         os.makedirs(self.stats_dir, exist_ok=True)
+        print(f"📁 Absolute stats dir: {os.path.abspath(self.stats_dir)}")
+
 
     def basic_info(self):
         print("\n🧾 Basic Information")
@@ -43,7 +51,7 @@ class DataExplorer:
             plt.xlabel(col)
             plt.ylabel("Frequency")
             plt.tight_layout()
-            output_path = os.path.join(self.stats_dir, f"{col}_distribution.png")
+            output_path = os.path.join(self.stats_dir, f"{self.label}_{col}_distribution.png")
             plt.savefig(output_path)
             if self.configs.DEBUG:
                 plt.show()
@@ -55,7 +63,7 @@ class DataExplorer:
         corr = self.df.corr(numeric_only=True)
         sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
         plt.title("Feature Correlation Heatmap")
-        output_path = os.path.join(self.stats_dir, "correlation_heatmap.png")
+        output_path = os.path.join(self.stats_dir, f"{self.label}_correlation_heatmap.png")
         plt.savefig(output_path)
         if self.configs.DEBUG:
             plt.show()
@@ -67,7 +75,7 @@ class DataExplorer:
             plt.figure(figsize=(6, 4))
             sns.boxplot(x=self.df[col])
             plt.title(f"Boxplot of {col}")
-            output_path = os.path.join(self.stats_dir, f"{col}_box_plot.png")
+            output_path = os.path.join(self.stats_dir, f"{self.label}_{col}_box_plot.png")
             plt.savefig(output_path)
             if self.configs.DEBUG:
                 plt.show()
@@ -79,10 +87,14 @@ class DataExplorer:
         print("\n📊 Descriptive Statistics:")
         print(desc)
         # Save to CSV
-        output_path = os.path.join(self.stats_dir, "dataset_statistics.csv")
+        output_path = os.path.join(self.stats_dir, f"{self.label}_dataset_statistics.csv")
         desc.to_csv(output_path)
         print(f"\n📜 Dataset statistics saved to: {output_path}")
         return self
+
+    def __call__(self):
+        self.basic_info().plot_distributions().correlation_heatmap().plot_boxplots().save_statistics_log()
+
 
 if __name__ == "__main__":
     DATA_PATH = "./data/concrete_data.csv"
@@ -92,9 +104,4 @@ if __name__ == "__main__":
     # Remove keys with None values (those not passed via CLI)
     user_config = {k.upper(): v for k, v in args_dict.items() if v is not None}
     explorer = DataExplorer(user_configs= user_config)
-    explorer\
-        .basic_info()\
-        .plot_distributions()\
-        .correlation_heatmap()\
-        .plot_boxplots() \
-        .save_statistics_log()
+    explorer()

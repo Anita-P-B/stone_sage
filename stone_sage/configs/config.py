@@ -6,6 +6,13 @@ class Config:
         CHECKSUM="3a8e1fe4362dc3fbff27ef2eaa42c8390ad970cdb6931479876f47dd23ead7d5",  # SHA-256 of the known-good file
         FORCE_DOWNLOAD = False,
         SMALL_DATASET=False,
+        PLOT_STATISTICS=False,
+
+        # Data split
+        SPLIT_SEED=42,
+        VAL_RATIO=0.1,
+        TEST_RATIO = 0.1,
+
 
         # General constants
         BATCH_SIZE=32,
@@ -31,10 +38,6 @@ class Config:
         RUN_DIR_BASE="./experiments",
         CHECKPOINT_PATH = None,
 
-        # Data split
-        SPLIT_SEED=42,
-        VAL_RATIO=0.8, # Ratio of validation set from the full test set
-
         # Sweep flag
         SWEEP_MODE = False,
 
@@ -47,6 +50,12 @@ class Config:
         self.CHECKSUM = CHECKSUM
         self.FORCE_DOWNLOAD = FORCE_DOWNLOAD
         self.SMALL_DATASET = SMALL_DATASET
+        self.PLOT_STATISTICS = PLOT_STATISTICS
+
+        # Data split
+        self.SPLIT_SEED = SPLIT_SEED
+        self.VAL_RATIO = VAL_RATIO
+        self.TEST_RATIO = TEST_RATIO
 
         # General constants
         self.BATCH_SIZE = BATCH_SIZE
@@ -72,9 +81,6 @@ class Config:
         self.RUN_DIR_BASE = RUN_DIR_BASE
         self.CHECKPOINT_PATH = CHECKPOINT_PATH
 
-        # Data split
-        self.SPLIT_SEED = SPLIT_SEED
-        self.VAL_RATIO = VAL_RATIO
 
         # Sweep mode
         self.SWEEP_MODE = SWEEP_MODE

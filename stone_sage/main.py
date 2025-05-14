@@ -1,13 +1,16 @@
+import os
+from datetime import datetime
+
+import torch
+
 from stone_sage.arg_parser import get_args
 from stone_sage.configs.config import Config
+from stone_sage.datasets.data_loader import load_or_download_data, split_and_save_partitions
 from stone_sage.utils.utils import update_configs_with_dict
-from stone_sage.datasets.data_loader import load_or_download_data
-import torch
-import os
-import pandas as pd
+from stone_sage.datasets.data_exploration import explore_partitioned_data
+
 
 def main(sweep_config=None, user_configs=None):
-
     # set configs
     static_configs = Config()
     # Merge order: static < sweep < user (CLI wins)
@@ -27,16 +30,33 @@ def main(sweep_config=None, user_configs=None):
         path=configs.DATA_PATH,
         force_download=configs.FORCE_DOWNLOAD,
         expected_checksum=configs.CHECKSUM,
-        debug = configs.DEBUG
+        debug=configs.DEBUG
     )
     if configs.DEBUG:
         print(df.head())
+    # create run dir
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    run_dir = os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}_run_{timestamp}")
+
+    # split dataset to partitions
+    _, train_df, val_df, test_df = (
+        split_and_save_partitions(df=df, run_dir=run_dir,
+                                  val_ratio=configs.VAL_RATIO,
+                                  test_ratio=configs.TEST_RATIO,
+                                  random_state=configs.SPLIT_SEED))
+    # save data statistics
+    explore_partitioned_data(
+        {"train": train_df, "val": val_df, "test": test_df},
+        user_config,
+        run_data_path=os.path.join(run_dir, "dataset_with_partitions.csv"),
+        plot_statistics= configs.PLOT_STATISTICS
+    )
+
 
 if __name__ == '__main__':
-
     args = get_args()
     args_dict = vars(args)
 
     # Remove keys with None values (those not passed via CLI)
     user_config = {k.upper(): v for k, v in args_dict.items() if v is not None}
-    main(user_configs = user_config)
+    main(user_configs=user_config)
