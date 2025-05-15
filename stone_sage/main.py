@@ -2,12 +2,16 @@ import os
 from datetime import datetime
 
 import torch
+from torch.utils.data import DataLoader
 
 from stone_sage.arg_parser import get_args
 from stone_sage.configs.config import Config
 from stone_sage.datasets.dataset_utils import load_or_download_data, split_and_save_partitions
-from stone_sage.utils.utils import update_configs_with_dict
 from stone_sage.datasets.partition_analysis import analyze_partitioned_data
+from stone_sage.datasets.stone_dataset import StoneDataset
+from stone_sage.models.stone_regressor import StoneRegressor
+from stone_sage.train import Trainer
+from stone_sage.utils.utils import update_configs_with_dict, get_loss_func, get_optimizer, save_run_state
 
 
 def main(sweep_config=None, user_configs=None):
@@ -39,22 +43,35 @@ def main(sweep_config=None, user_configs=None):
     run_dir = os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}_run_{timestamp}")
 
     # split dataset to partitions
-    _, train_df, val_df, test_df = (
-        split_and_save_partitions(df=df, run_dir=run_dir,
-                                  val_ratio=configs.VAL_RATIO,
-                                  test_ratio=configs.TEST_RATIO,
-                                  random_state=configs.SPLIT_SEED))
+    _, train_df, val_df, test_df = split_and_save_partitions(df=df, run_dir=run_dir,
+                                                             val_ratio=configs.VAL_RATIO,
+                                                             test_ratio=configs.TEST_RATIO,
+                                                             random_state=configs.SPLIT_SEED)
     # save data statistics
     analyze_partitioned_data(
         {"train": train_df, "val": val_df, "test": test_df},
         user_config,
         run_data_path=os.path.join(run_dir, "dataset_with_partitions.csv"),
-        plot_statistics= configs.PLOT_STATISTICS
+        plot_statistics=configs.PLOT_STATISTICS
     )
 
+    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN)
+    train_loader = DataLoader(train_set, batch_size=configs.BATCH_SIZE, shuffle=configs.SHUFFLE)
+    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN)
+    val_loader = DataLoader(val_set, batch_size=configs.BATCH_SIZE, shuffle=configs.SHUFFLE)
 
+    input_dim = train_set.input_dim
+    # get model loss and optimizer
+    model = StoneRegressor(input_dim=input_dim, hidden_dims=configs.HIDDEN_DIMS,
+                           dropout=configs.DROPOUT)
+    optimizer = get_optimizer(configs.OPTIMIZER, configs.LEARNING_RATE, model)
+    loss = get_loss_func(configs.LOSS)
 
-
+    # save run configurations
+    save_run_state(configs=configs, run_dir=run_dir)
+    # Train
+    trainer = Trainer(model, optimizer, loss, train_loader, val_loader)
+    trainer.train(num_epochs=configs.EPOCHS)
 
 
 if __name__ == '__main__':

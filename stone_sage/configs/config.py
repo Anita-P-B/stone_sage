@@ -7,6 +7,8 @@ class Config:
         FORCE_DOWNLOAD = False,
         SMALL_DATASET=False,
         PLOT_STATISTICS=False,
+        TARGET_COLUMN = "Concrete compressive strength",
+        SHUFFLE = True,
 
         # Data split
         SPLIT_SEED=42,
@@ -15,12 +17,15 @@ class Config:
 
 
         # General constants
-        BATCH_SIZE=32,
+        BATCH_SIZE=8,
         EPOCHS=100,
         MODEL = None,
+        LOSS = "mae",
+        OPTIMIZER = "adam" ,
+        HIDDEN_DIMS = [32, 16],
         LEARNING_RATE=1e-3,
         SCHEDULER = True, # Set to False to disable learning rate scheduler
-        DROPOUT_RATE = 0.5,
+        DROPOUT = 0.5,
         WEIGHT_DECAY = 1e-4,
         AUGMENTATION_PROB=0.3,
         NORM=None,  # None|"mean"
@@ -51,6 +56,8 @@ class Config:
         self.FORCE_DOWNLOAD = FORCE_DOWNLOAD
         self.SMALL_DATASET = SMALL_DATASET
         self.PLOT_STATISTICS = PLOT_STATISTICS
+        self. TARGET_COLUMN =  TARGET_COLUMN
+        self.SHUFFLE  = SHUFFLE
 
         # Data split
         self.SPLIT_SEED = SPLIT_SEED
@@ -61,9 +68,12 @@ class Config:
         self.BATCH_SIZE = BATCH_SIZE
         self.EPOCHS = EPOCHS
         self.MODEL = MODEL
+        self.LOSS = LOSS
+        self.OPTIMIZER = OPTIMIZER
+        self.HIDDEN_DIMS =  HIDDEN_DIMS
         self.LEARNING_RATE = LEARNING_RATE
         self.SCHEDULER = SCHEDULER
-        self.DROPOUT_RATE = DROPOUT_RATE
+        self.DROPOUT = DROPOUT
         self.WEIGHT_DECAY = WEIGHT_DECAY
         self.AUGMENTATION_PROB = AUGMENTATION_PROB
         self.NORM = NORM
