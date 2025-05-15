@@ -1,10 +1,10 @@
-from stone_sage.datasets.data_explorer import DataExplorer
+from stone_sage.datasets.statistics_explorer import DataStats
 
 
-def explore_partitioned_data(partitions: dict, user_config, run_data_path, plot_statistics = False):
+def analyze_partitioned_data(partitions: dict, user_config, run_data_path, plot_statistics = False):
     for label, df in partitions.items():
         print(f"\n🔍 Exploring {label} data...")
-        explorer = DataExplorer(
+        explorer = DataStats(
             user_configs=user_config,
             df=df,
             label=label,

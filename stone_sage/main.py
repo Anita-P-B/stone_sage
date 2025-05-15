@@ -5,9 +5,9 @@ import torch
 
 from stone_sage.arg_parser import get_args
 from stone_sage.configs.config import Config
-from stone_sage.datasets.data_loader import load_or_download_data, split_and_save_partitions
+from stone_sage.datasets.dataset_utils import load_or_download_data, split_and_save_partitions
 from stone_sage.utils.utils import update_configs_with_dict
-from stone_sage.datasets.data_exploration import explore_partitioned_data
+from stone_sage.datasets.partition_analysis import analyze_partitioned_data
 
 
 def main(sweep_config=None, user_configs=None):
@@ -45,12 +45,16 @@ def main(sweep_config=None, user_configs=None):
                                   test_ratio=configs.TEST_RATIO,
                                   random_state=configs.SPLIT_SEED))
     # save data statistics
-    explore_partitioned_data(
+    analyze_partitioned_data(
         {"train": train_df, "val": val_df, "test": test_df},
         user_config,
         run_data_path=os.path.join(run_dir, "dataset_with_partitions.csv"),
         plot_statistics= configs.PLOT_STATISTICS
     )
+
+
+
+
 
 
 if __name__ == '__main__':

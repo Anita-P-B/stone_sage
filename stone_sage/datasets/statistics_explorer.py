@@ -6,9 +6,9 @@ import os
 from stone_sage.arg_parser import get_args
 from stone_sage.configs.config import Config
 from stone_sage.utils.utils import update_configs_with_dict
-from stone_sage.datasets.data_loader import load_or_download_data
+from stone_sage.datasets.dataset_utils import load_or_download_data
 
-class DataExplorer:
+class DataStats:
     def __init__(self, user_configs = None, df=None, label="full", data_path = None):
         # set configs
         self.static_configs = Config()
