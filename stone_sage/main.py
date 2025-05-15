@@ -70,7 +70,7 @@ def main(sweep_config=None, user_configs=None):
     # save run configurations
     save_run_state(configs=configs, run_dir=run_dir)
     # Train
-    trainer = Trainer(model, optimizer, loss, train_loader, val_loader)
+    trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir)
     trainer.train(num_epochs=configs.EPOCHS)
 
 

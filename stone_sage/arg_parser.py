@@ -11,8 +11,8 @@ def get_args():
                         help="set on for redownload the dataset")
     parser.add_argument('--save_path', type=str, default=None, help="Path to save the model.")
     parser.add_argument('--data_path', type=str, default="./data\concrete_data.csv", help="Path of dataset csv file.")
-    parser.add_argument('--checkpoint_path', type=str, default=None, help="resumes training from "
-                                                                          "given checkpoint.")
+    parser.add_argument('--checkpoint_path', type=str, default=None, help="path for saved checkpoint "
+                                                                          "for evaluattion or resume training")
     parser.add_argument('--epochs', type=int, default=None, help="Number of epochs in train.")
     args = parser.parse_args()
     return args

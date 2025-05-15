@@ -2,9 +2,13 @@ from torch import nn, optim
 import os
 import json
 import subprocess
+import torch
+import csv
 
-def update_configs_with_dict(config_obj, override_dict):
+def update_configs_with_dict(config_obj, override_dict, debug = False):
     for key, value in override_dict.items():
+        if debug:
+            print(f"🔍 Overriding: {key} = {value} | Present? {hasattr(config_obj, key)}")
         if hasattr(config_obj, key):
             setattr(config_obj, key, value)
     return config_obj
@@ -59,3 +63,44 @@ def save_run_state(configs,  run_dir):
     except subprocess.CalledProcessError:
         print(f"⚠️ Failed to mark config file as read-only. File still saved at: {config_path}")
     print(f"🗃️  Run saved to: {run_dir}")
+
+def save_checkpoint(run_dir, model, optimizer, scheduler, epoch, train_loss, val_loss, extra_info=None):
+    """
+    Save model checkpoint with flexible metadata.
+
+    Parameters:
+        run_dir (str): Directory to save the checkpoint in.
+        model (torch.nn.Module): The model to save.
+        optimizer (torch.optim.Optimizer): The optimizer used.
+        scheduler (optional): The learning rate scheduler used.
+        epoch (int): Current epoch number.
+        train_loss (float): Training loss.
+        val_loss (float): Validation loss.
+        extra_info (dict, optional): Additional items to include in the checkpoint.
+    """
+    filename = f"train_loss_{train_loss:.2f}_val_loss_{val_loss:.2f}.pt"
+    full_path = os.path.join(run_dir, filename)
+
+    checkpoint = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict() if scheduler else None
+    }
+
+    if extra_info:
+        checkpoint.update(extra_info)
+
+    torch.save(checkpoint, full_path)
+    print(f"🧪 Best model saved: {full_path}")
+
+def save_evaluation_summary(run_dir, metrics_dict):
+    os.makedirs(run_dir, exist_ok=True)
+    file_path = os.path.join(run_dir, "evaluation_results.csv")
+
+    with open(file_path, mode='w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=metrics_dict.keys())
+        writer.writeheader()
+        writer.writerow(metrics_dict)
+
+    print(f"📊 Evaluation results saved to: {file_path}")
