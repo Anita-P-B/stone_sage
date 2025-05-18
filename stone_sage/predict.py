@@ -7,7 +7,7 @@ from stone_sage.models.stone_regressor import StoneRegressor  # adapt to your ac
 from stone_sage.datasets.stone_dataset import StoneDataset
 from torch.utils.data import DataLoader
 import json
-from stone_sage.utils.utils import update_configs_with_dict, save_evaluation_summary
+from stone_sage.utils.utils import update_configs_with_dict, save_evaluation_summary, relative_mae_percentage
 from stone_sage.utils.dict_to_class import DotDict
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error, r2_score
@@ -59,12 +59,11 @@ class Predictor:
             predictions = part_df["prediction"].values
 
             mae = mean_absolute_error(true_targets, predictions)
-            rmse = np.sqrt(mean_squared_error(true_targets, predictions))
-            r2 = r2_score(true_targets, predictions)
+            rel_mae = relative_mae_percentage(true_targets, predictions)
 
             metrics[f"{partition}_mae"] = mae
-            metrics[f"{partition}_rmse"] = rmse
-            metrics[f"{partition}_r2"] = r2
+            metrics[f"{partition}_rel_mae"] = rel_mae
+
 
         save_evaluation_summary(self.run_dir, metrics)
 

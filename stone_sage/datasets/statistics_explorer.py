@@ -14,6 +14,7 @@ class DataStats:
         self.static_configs = Config()
         self.configs = update_configs_with_dict(self.static_configs, user_configs or {})
         # get dataset DataFrame
+        self.debug = self.configs.DEBUG
         if df is not None:
             self.df = df
         else:
@@ -21,14 +22,15 @@ class DataStats:
             path=self.configs.DATA_PATH,
             force_download=self.configs.FORCE_DOWNLOAD,
             expected_checksum=self.configs.CHECKSUM,
-            debug = self.configs.DEBUG
+            debug = self.debug
                                    )
         self.label = label
         self.numeric_columns = self.df.select_dtypes(include=['number']).columns
         self.data_path = data_path if data_path is not None else self.configs.DATA_PATH
         self.stats_dir = os.path.join(os.path.dirname(self.data_path), "statistics")
         os.makedirs(self.stats_dir, exist_ok=True)
-        print(f"📁 Absolute stats dir: {os.path.abspath(self.stats_dir)}")
+        if self.debug:
+            print(f"📁 Absolute stats dir: {os.path.abspath(self.stats_dir)}")
 
 
     def basic_info(self):
@@ -84,12 +86,14 @@ class DataStats:
     def save_statistics_log(self):
         # Add median to the describe DataFrame
         desc = self.df[self.numeric_columns].describe().T
-        print("\n📊 Descriptive Statistics:")
-        print(desc)
+        if self.debug:
+            print("\n📊 Descriptive Statistics:")
+            print(desc)
         # Save to CSV
         output_path = os.path.join(self.stats_dir, f"{self.label}_dataset_statistics.csv")
         desc.to_csv(output_path)
-        print(f"\n📜 Dataset statistics saved to: {output_path}")
+        if self.debug:
+            print(f"\n📜 Dataset statistics saved to: {output_path}")
         return self
 
     def __call__(self):

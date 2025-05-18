@@ -4,6 +4,8 @@ import json
 import subprocess
 import torch
 import csv
+from sklearn.metrics import mean_absolute_error
+import numpy as np
 
 def update_configs_with_dict(config_obj, override_dict, debug = False):
     for key, value in override_dict.items():
@@ -104,3 +106,11 @@ def save_evaluation_summary(run_dir, metrics_dict):
         writer.writerow(metrics_dict)
 
     print(f"📊 Evaluation results saved to: {file_path}")
+
+
+def relative_mae_percentage(y_true, y_pred):
+    mae = mean_absolute_error(y_true, y_pred)
+    mean_target = np.mean(y_true)
+    if mean_target == 0:
+        return np.inf  # Prevent division by zero
+    return (mae / mean_target) * 100

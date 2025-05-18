@@ -5,7 +5,6 @@ class Config:
         DATA_PATH= r"./data/concrete_data.csv",
         CHECKSUM="3a8e1fe4362dc3fbff27ef2eaa42c8390ad970cdb6931479876f47dd23ead7d5",  # SHA-256 of the known-good file
         FORCE_DOWNLOAD = False,
-        SMALL_DATASET=False,
         PLOT_STATISTICS=False,
         TARGET_COLUMN = "Concrete compressive strength",
         SHUFFLE = True,
@@ -19,13 +18,13 @@ class Config:
         # General constants
         BATCH_SIZE=8,
         EPOCHS=100,
-        MODEL = None,
+        MODEL = None, # set different options in the future
         LOSS = "mae",
         OPTIMIZER = "adam" ,
         HIDDEN_DIMS = [32, 16],
-        LEARNING_RATE=1e-3,
+        LEARNING_RATE=1e-4,
         SCHEDULER = True, # Set to False to disable learning rate scheduler
-        DROPOUT = 0.5,
+        DROPOUT = 0,
         WEIGHT_DECAY = 1e-4,
         AUGMENTATION_PROB=0.3,
         NORM=None,  # None|"mean"
@@ -54,7 +53,6 @@ class Config:
         self.DATA_PATH =DATA_PATH
         self.CHECKSUM = CHECKSUM
         self.FORCE_DOWNLOAD = FORCE_DOWNLOAD
-        self.SMALL_DATASET = SMALL_DATASET
         self.PLOT_STATISTICS = PLOT_STATISTICS
         self. TARGET_COLUMN =  TARGET_COLUMN
         self.SHUFFLE  = SHUFFLE

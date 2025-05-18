@@ -1,8 +1,6 @@
 import argparse
 def get_args():
     parser = argparse.ArgumentParser(description="Train a model")
-    parser.add_argument('--small_dataset', action='store_true', default=None,
-                        help="Train on a small subset (10%) of the dataset for debugging purposes.")
     parser.add_argument('--debug', action='store_true', default=None,
                         help="set on for debugging purposes")
     parser.add_argument('--plot_statistics', action='store_true', default=None,
