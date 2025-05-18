@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from tqdm import tqdm
-from stone_sage.utils.utils import save_checkpoint, save_evaluation_summary, relative_mae_percentage
+from stone_sage.utils.utils import save_checkpoint, save_evaluation_summary, relative_mae_percentage, build_epoch_metrics
 import matplotlib.pyplot as plt
 import csv
 import os
@@ -52,39 +52,36 @@ class Trainer:
         train_rel_mae = [entry["train_rel_mae"] for entry in self.history]
         val_rel_mae = [entry["val_rel_mae"] for entry in self.history]
 
-        # plot train and val loss
-        plt.figure(figsize=(8, 5))
-        plt.plot(epochs, train_losses, label="Train Loss", marker="o")
-        plt.plot(epochs, val_losses, label="Validation Loss", marker="o")
-        plt.xlabel("Epoch")
-        plt.ylabel("Loss")
-        plt.title("Training & Validation Loss")
-        plt.legend()
-        plt.grid(True)
+        # plot
+        fig, axs = plt.subplots(1, 2, figsize=(15, 8), sharex=True)
+        fig.subplots_adjust(hspace=0.4)  # Space between plots
 
-        plot_path = os.path.join(self.run_dir, "training_curve.png")
+        # 🔹 Subplot 1: Loss
+        axs[0].plot(epochs, train_losses, label="Train Loss", marker="o")
+        axs[0].plot(epochs, val_losses, label="Validation Loss", marker="o")
+        axs[0].set_ylabel("Loss")
+        axs[0].set_title("Training & Validation Loss")
+        axs[0].legend()
+        axs[0].grid(True)
+
+        # 🔸 Subplot 2: Relative MAE %
+        axs[1].plot(epochs, train_rel_mae, label="Train Rel MAE (%)", marker="s")
+        axs[1].plot(epochs, val_rel_mae, label="Validation Rel MAE (%)", marker="s")
+        axs[1].set_xlabel("Epoch")
+        axs[1].set_ylabel("Relative MAE (%)")
+        axs[1].set_title("Relative MAE Percentage")
+        axs[1].legend()
+        axs[1].yaxis.set_major_locator(mticker.MultipleLocator(5))
+        axs[1].grid(True, which="major", axis="y", linestyle="--", alpha=0.7)
+        axs[1].axhline(5, color="red", linestyle="--", linewidth=1.5, label="Goal: 5%")
+        axs[1].legend()
+
+        # Save the figure
+        plot_path = os.path.join(self.run_dir, "training_curves.png")
+        plt.tight_layout()
         plt.savefig(plot_path)
         plt.close()
-        print(f"📈 Loss curve plot saved to: {plot_path}")
-
-        # 📉 Relative MAE % train and val
-        plt.figure(figsize=(8, 5))
-        plt.plot(epochs, train_rel_mae, label="Train Rel MAE (%)", marker="s")
-        plt.plot(epochs, val_rel_mae, label="Validation Rel MAE (%)", marker="s")
-        plt.xlabel("Epoch")
-        plt.ylabel("Relative MAE (%)")
-        plt.title("Relative MAE Percentage")
-        plt.legend()
-
-        # Add horizontal gridlines every 5%
-        plt.gca().yaxis.set_major_locator(mticker.MultipleLocator(5))
-        plt.grid(True, which="major", axis="y", linestyle="--", alpha=0.7)
-        plt.axhline(5, color="red", linestyle="--", linewidth=1.5, label="Goal: 5%")
-
-        relmae_plot_path = os.path.join(self.run_dir, "relative_mae_curve.png")
-        plt.savefig(relmae_plot_path)
-        plt.close()
-        print(f"📉 Relative MAE curve plot saved to: {relmae_plot_path}")
+        print(f"📊 training curves saved to: {plot_path}")
 
     def train(self, num_epochs=10):
         for epoch in range(1, num_epochs + 1):
@@ -111,44 +108,38 @@ class Trainer:
                 f"Val Loss: {val_loss:.4f} | Val MAE: {val_mae:.4f} | Val RelMAE: {val_rel_mae:.2f}%"
             )
 
+            # train loos metrics
+            losses = {"train_loss": train_loss, "val_loss": val_loss}
+            metrics = {
+                "train_mae": train_mae,
+                "val_mae": val_mae,
+                "train_rel_mae": train_rel_mae,
+                "val_rel_mae": val_rel_mae
+            }
+
+            epoch_metrics = build_epoch_metrics(epoch, losses, metrics)
+            # 🔥 Update training history
+            self.history.append(epoch_metrics)
+
             # Save best checkpoint
             if val_loss < self.best_loss:
                 self.best_loss = val_loss
                 if not self.run_dir:
                     raise ValueError("⚠️ Cannot save checkpoint: `checkpoint_path` is not set or is empty.")
 
-                extra_metrics = {
-                    "train_rel_mae": train_rel_mae,
-                    "val_rel_mae": val_rel_mae
-                }
 
                 save_checkpoint(
                     run_dir=self.run_dir,
                     model=self.model,
                     optimizer=self.optimizer,
                     scheduler=self.scheduler,
-                    epoch=epoch,
-                    train_loss=train_loss,
-                    val_loss=val_loss,
-                    extra_info= extra_metrics
-                )
-            # 🔥 Update training history
-            self.history.append({
-                'epoch': epoch,
-                'train_loss': train_loss,
-                "train_rel_mae": train_rel_mae,
-                'val_loss': val_loss,
-                "val_rel_mae": val_rel_mae
-            })
+                    epoch_metrics=epoch_metrics
+                    )
+
         self.save_history_and_plot()
 
-        final_train_mae = self.history[-1]["train_loss"]
-        final_val_mae = self.history[-1]["val_loss"]
-
-        save_evaluation_summary(self.run_dir, {
-            "train_mae": final_train_mae,
-            "val_mae": final_val_mae,
-        })
+        final_metrics = self.history[-1]
+        save_evaluation_summary(self.run_dir, final_metrics)
 
     def _train_one_epoch(self, epoch):
         self.model.train()

@@ -66,28 +66,22 @@ def save_run_state(configs,  run_dir):
         print(f"⚠️ Failed to mark config file as read-only. File still saved at: {config_path}")
     print(f"🗃️  Run saved to: {run_dir}")
 
-def save_checkpoint(run_dir, model, optimizer, scheduler, epoch, train_loss, val_loss, extra_info=None):
-    """
-    Save model checkpoint with flexible metadata.
+def save_checkpoint(run_dir, model, optimizer, scheduler,epoch_metrics, extra_info=None):
 
-    Parameters:
-        run_dir (str): Directory to save the checkpoint in.
-        model (torch.nn.Module): The model to save.
-        optimizer (torch.optim.Optimizer): The optimizer used.
-        scheduler (optional): The learning rate scheduler used.
-        epoch (int): Current epoch number.
-        train_loss (float): Training loss.
-        val_loss (float): Validation loss.
-        extra_info (dict, optional): Additional items to include in the checkpoint.
-    """
-    filename = f"train_loss_{train_loss:.2f}_val_loss_{val_loss:.2f}.pt"
+    train_loss = epoch_metrics.get("train_loss", None)
+    val_loss = epoch_metrics.get("val_loss", None)
+    if train_loss is not None and val_loss is not None:
+        filename = f"train_loss_{train_loss:.2f}_val_loss_{val_loss:.2f}.pt"
+    else:
+        filename = f"checkpoint_epoch_{epoch_metrics.get('epoch', 'NA')}.pt"
     full_path = os.path.join(run_dir, filename)
 
     checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scheduler_state_dict': scheduler.state_dict() if scheduler else None
+        "epoch": epoch_metrics.get("epoch", None),
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "scheduler_state_dict": scheduler.state_dict() if scheduler else None,
+        "epoch_metrics": epoch_metrics
     }
 
     if extra_info:
@@ -114,3 +108,6 @@ def relative_mae_percentage(y_true, y_pred):
     if mean_target == 0:
         return np.inf  # Prevent division by zero
     return (mae / mean_target) * 100
+
+def build_epoch_metrics(epoch, loss_dict, metric_dict):
+    return {"epoch": epoch, **loss_dict, **metric_dict}
