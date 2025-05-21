@@ -14,11 +14,11 @@ from stone_sage.train import Trainer
 from stone_sage.utils.utils import update_configs_with_dict, get_loss_func, get_optimizer, save_run_state
 
 
-def main(sweep_config=None, user_configs=None):
+def main(sweep_configs=None, user_configs=None, sweep = False):
     # set configs
     static_configs = Config()
     # Merge order: static < sweep < user (CLI wins)
-    configs = update_configs_with_dict(static_configs, sweep_config or {})
+    configs = update_configs_with_dict(static_configs, sweep_configs or {})
     configs = update_configs_with_dict(configs, user_configs or {})
 
     # get device
@@ -38,9 +38,12 @@ def main(sweep_config=None, user_configs=None):
     )
     if configs.DEBUG:
         print(df.head())
-    # create run dir
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    run_dir = os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}_run_{timestamp}")
+
+    if sweep:
+        run_dir =  os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}")
+    else:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        run_dir = os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}_run_{timestamp}")
 
     # split dataset to partitions
     _, train_df, val_df, test_df = split_and_save_partitions(df=df, run_dir=run_dir,
@@ -50,7 +53,7 @@ def main(sweep_config=None, user_configs=None):
     # save data statistics
     analyze_partitioned_data(
         {"train": train_df, "val": val_df, "test": test_df},
-        user_config,
+        user_configs,
         run_data_path=os.path.join(run_dir, "dataset_with_partitions.csv"),
         plot_statistics=configs.PLOT_STATISTICS
     )

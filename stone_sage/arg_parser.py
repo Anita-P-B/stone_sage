@@ -12,5 +12,7 @@ def get_args():
     parser.add_argument('--checkpoint_path', type=str, default=None, help="path for saved checkpoint "
                                                                           "for evaluattion or resume training")
     parser.add_argument('--epochs', type=int, default=None, help="Number of epochs in train.")
+    parser.add_argument('--sweep_name', type=str, default="default",
+                        help="Name for the sweep run folder.")
     args = parser.parse_args()
     return args
