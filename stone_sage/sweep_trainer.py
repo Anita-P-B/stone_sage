@@ -7,7 +7,7 @@ from datetime import datetime
 import pandas as pd
 from stone_sage.arg_parser import get_args
 from stone_sage.main import main as run_training
-
+from stone_sage.utils.utils import log_sweep_result
 def sweep_train(user_config= None):
 
     # Compose sweep run directory
@@ -46,36 +46,16 @@ def sweep_train(user_config= None):
 
         # Locate run directory
         run_dir = os.path.join(sweep_run_dir, flat_config_str)
-        metrics_path = os.path.join(run_dir, "evaluation_results.csv")
+        master_log_path = os.path.join(sweep_run_dir, "all_sweep_results.csv")
 
         # save run logs into sweep master log file
-        if os.path.exists(metrics_path):
-            metrics_df = pd.read_csv(metrics_path)
-            if not metrics_df.empty:
-                final_row = metrics_df.iloc[-1]  # take the last row (final epoch)
-            else:
-                print(f"⚠️ Empty metrics file for {flat_config_str}.")
-                final_row = pd.Series()
-        else:
-            print(f"⚠️ Missing metrics file for {flat_config_str}.")
-            final_row = pd.Series()
+        log_sweep_result(run_dir, config, master_log_path)
 
-        # Merge metrics and config info
-        full_row = pd.Series(config)  # insert sweep config columns
-        full_row["run_dir"] = run_dir
-
-        # Merge with metrics
-        combined_row = pd.concat([full_row, final_row])
-        sweep_log_df.append(combined_row)
-
-    # Save full sweep log
-    if sweep_log_df:
-        sweep_df = pd.DataFrame(sweep_log_df)
-        sweep_summary_path = os.path.join(sweep_run_dir, "all_sweep_results.csv")
-        sweep_df.to_csv(sweep_summary_path, index=False)
-        print(f"\n📜 All sweep results saved to: {sweep_summary_path}")
-    else:
-        print("\n⚠️ No successful sweeps to log.")
+    # 📊 Show full sweep log
+    if os.path.exists(master_log_path):
+        sweep_df = pd.read_csv(master_log_path)
+        print("\n📜 Final sweep results:\n")
+        print(sweep_df)
 
 if __name__ == '__main__':
 

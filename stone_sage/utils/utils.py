@@ -6,6 +6,7 @@ import torch
 import csv
 from sklearn.metrics import mean_absolute_error
 import numpy as np
+import pandas as pd
 
 def update_configs_with_dict(config_obj, override_dict, debug = False):
     for key, value in override_dict.items():
@@ -111,3 +112,38 @@ def relative_mae_percentage(y_true, y_pred):
 
 def build_epoch_metrics(epoch, loss_dict, metric_dict):
     return {"epoch": epoch, **loss_dict, **metric_dict}
+
+def log_sweep_result(run_dir, config, master_log_path):
+    """
+    Logs the final metrics of a single sweep run into the master CSV log.
+
+    Parameters:
+        run_dir (str): Path to the individual run directory containing evaluation_results.csv
+        config (dict): Dictionary of the sweep configuration
+        master_log_path (str): Path to the final CSV log file for all sweeps
+    """
+    metrics_path = os.path.join(run_dir, "evaluation_results.csv")
+
+    if os.path.exists(metrics_path):
+        metrics_df = pd.read_csv(metrics_path)
+        if not metrics_df.empty:
+            final_row = metrics_df.iloc[-1]  # Final epoch row
+        else:
+            print(f"⚠️ Empty metrics file for {run_dir}.")
+            final_row = pd.Series()
+    else:
+        print(f"⚠️ Missing metrics file for {run_dir}.")
+        final_row = pd.Series()
+
+    full_row = pd.Series(config)
+    full_row["run_dir"] = run_dir
+    combined_row = pd.concat([full_row, final_row])
+
+    # Append or create the master CSV
+    if os.path.exists(master_log_path):
+        sweep_df = pd.read_csv(master_log_path)
+        sweep_df = pd.concat([sweep_df, combined_row.to_frame().T], ignore_index=True)
+    else:
+        sweep_df = pd.DataFrame([combined_row])
+
+    sweep_df.to_csv(master_log_path, index=False)

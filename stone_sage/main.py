@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-
+from torchinfo import summary
 import torch
 from torch.utils.data import DataLoader
 
@@ -65,8 +65,9 @@ def main(sweep_configs=None, user_configs=None, sweep = False):
 
     input_dim = train_set.input_dim
     # get model loss and optimizer
-    model = StoneRegressor(input_dim=input_dim, hidden_dims=configs.HIDDEN_DIMS,
-                           dropout=configs.DROPOUT)
+    model = StoneRegressor.build(configs, input_dim)
+    if configs.DEBUG:
+        summary(model, input_size=(configs.BATCH_SIZE, input_dim))
     optimizer = get_optimizer(configs.OPTIMIZER, configs.LEARNING_RATE, model)
     loss = get_loss_func(configs.LOSS)
 
