@@ -7,14 +7,17 @@ import csv
 from sklearn.metrics import mean_absolute_error
 import numpy as np
 import pandas as pd
+import re
 
-def update_configs_with_dict(config_obj, override_dict, debug = False):
+
+def update_configs_with_dict(config_obj, override_dict, debug=False):
     for key, value in override_dict.items():
         if debug:
             print(f"🔍 Overriding: {key} = {value} | Present? {hasattr(config_obj, key)}")
         if hasattr(config_obj, key):
             setattr(config_obj, key, value)
     return config_obj
+
 
 def get_optimizer(optimizer_name, learning_rate, model):
     optimizers = {
@@ -28,6 +31,7 @@ def get_optimizer(optimizer_name, learning_rate, model):
     except KeyError:
         raise ValueError(f"❌ Optimizer '{optimizer_name}' not recognized. Available: {list(optimizers.keys())}")
 
+
 def get_loss_func(loss_name):
     losses = {
         "mae": nn.L1Loss,
@@ -40,7 +44,8 @@ def get_loss_func(loss_name):
     except KeyError:
         raise ValueError(f"❌ Loss function '{loss_name}' not recognized. Available: {list(losses.keys())}")
 
-def save_run_state(configs,  run_dir):
+
+def save_run_state(configs, run_dir):
     """Save training configuration as a JSON file, serializing any non-JSON-safe values as strings."""
     # Create timestamped folder
     os.makedirs(run_dir, exist_ok=True)
@@ -67,8 +72,8 @@ def save_run_state(configs,  run_dir):
         print(f"⚠️ Failed to mark config file as read-only. File still saved at: {config_path}")
     print(f"🗃️  Run saved to: {run_dir}")
 
-def save_checkpoint(run_dir, model, optimizer, scheduler,epoch_metrics, extra_info=None):
 
+def save_checkpoint(run_dir, model, optimizer, scheduler, epoch_metrics, extra_info=None):
     train_loss = epoch_metrics.get("train_loss", None)
     val_loss = epoch_metrics.get("val_loss", None)
     if train_loss is not None and val_loss is not None:
@@ -91,6 +96,7 @@ def save_checkpoint(run_dir, model, optimizer, scheduler,epoch_metrics, extra_in
     torch.save(checkpoint, full_path)
     print(f"🧪 Best model saved: {full_path}")
 
+
 def save_evaluation_summary(run_dir, metrics_dict):
     os.makedirs(run_dir, exist_ok=True)
     file_path = os.path.join(run_dir, "evaluation_results.csv")
@@ -110,8 +116,10 @@ def relative_mae_percentage(y_true, y_pred):
         return np.inf  # Prevent division by zero
     return (mae / mean_target) * 100
 
+
 def build_epoch_metrics(epoch, loss_dict, metric_dict):
     return {"epoch": epoch, **loss_dict, **metric_dict}
+
 
 def log_sweep_result(run_dir, config, master_log_path):
     """
@@ -147,3 +155,18 @@ def log_sweep_result(run_dir, config, master_log_path):
         sweep_df = pd.DataFrame([combined_row])
 
     sweep_df.to_csv(master_log_path, index=False)
+
+
+def extract_val_loss(filename):
+    """
+    Extracts the validation loss from a checkpoint filename of the form:
+    'train_{train_loss}_val_{val_loss}.pt'
+    Returns float('inf') if extraction fails.
+    """
+    match = re.search(r"val_([0-9.]+)", filename)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return float("inf")
+    return float("inf")

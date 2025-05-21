@@ -14,11 +14,11 @@ class Config:
         VAL_RATIO=0.1,
         TEST_RATIO = 0.1,
 
-
         # General constants
-        BATCH_SIZE=8,
+        BATCH_SIZE=32,
         EPOCHS=100,
-        MODEL = None, # set different options in the future
+        MODEL = "tiny_cnn" , # set different options in the future
+        N_BEST_CHECKPOINTS = 3, # number of best checkpoints to save
         LOSS = "mae",
         OPTIMIZER = "adam" ,
         HIDDEN_DIMS = [32, 16],
@@ -48,6 +48,9 @@ class Config:
         # Debug
         DEBUG = False
 
+
+
+
     ):
         # dataset
         self.DATA_PATH =DATA_PATH
@@ -66,6 +69,7 @@ class Config:
         self.BATCH_SIZE = BATCH_SIZE
         self.EPOCHS = EPOCHS
         self.MODEL = MODEL
+        self.N_BEST_CHECKPOINTS =  N_BEST_CHECKPOINTS
         self.LOSS = LOSS
         self.OPTIMIZER = OPTIMIZER
         self.HIDDEN_DIMS =  HIDDEN_DIMS

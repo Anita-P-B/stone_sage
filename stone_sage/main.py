@@ -14,7 +14,7 @@ from stone_sage.train import Trainer
 from stone_sage.utils.utils import update_configs_with_dict, get_loss_func, get_optimizer, save_run_state
 
 
-def main(sweep_configs=None, user_configs=None, sweep = False):
+def main(sweep_configs=None, user_configs=None, sweep=False):
     # set configs
     static_configs = Config()
     # Merge order: static < sweep < user (CLI wins)
@@ -40,7 +40,7 @@ def main(sweep_configs=None, user_configs=None, sweep = False):
         print(df.head())
 
     if sweep:
-        run_dir =  os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}")
+        run_dir = os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}")
     else:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         run_dir = os.path.join(configs.RUN_DIR_BASE, f"{configs.SAVE_PATH}_run_{timestamp}")
@@ -74,7 +74,8 @@ def main(sweep_configs=None, user_configs=None, sweep = False):
     # save run configurations
     save_run_state(configs=configs, run_dir=run_dir)
     # Train
-    trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir)
+    trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir,
+                      n_best_checkpoints=configs.N_BEST_CHECKPOINTS)
     trainer.train(num_epochs=configs.EPOCHS)
 
 

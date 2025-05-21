@@ -8,6 +8,8 @@ import pandas as pd
 from stone_sage.arg_parser import get_args
 from stone_sage.main import main as run_training
 from stone_sage.utils.utils import log_sweep_result
+import itertools
+
 def sweep_train(user_config= None):
 
     # Compose sweep run directory
@@ -15,17 +17,19 @@ def sweep_train(user_config= None):
     sweep_run_dir = os.path.join("sweeps", f"sweep_{args.sweep_name}_{timestamp}")
     os.makedirs(sweep_run_dir, exist_ok=True)
 
-
     # Define sweep options
+    model_types = ["mlp", "tiny_deep", "wide_shallow", "tiny_cnn"]
+    batch_sizes = [16, 32, 64]
+    dropouts = [0.0, 0.1, 0.3]
+    learning_rates = [1e-2, 5e-3, 1e-3]
+
     sweep_configs = [
-        {"AUGMENTATION_PROB": 0.6, "BATCH_SIZE": 32},
-        {"AUGMENTATION_PROB": 0.7}
+        {"MODEL": m, "BATCH_SIZE": b, "DROPOUT": d, "LEARNING_RATE": lr}
+        for m, b, d, lr in itertools.product(model_types, batch_sizes, dropouts, learning_rates)
     ]
 
     # Track used flattened configs to detect duplicates
     used_names = set()
-    sweep_log_df = []
-
 
     for i, config in enumerate(sweep_configs):
         print(f"\n🌀 Starting sweep {i + 1}/{len(sweep_configs)} with config: {config}")
@@ -55,7 +59,7 @@ def sweep_train(user_config= None):
     if os.path.exists(master_log_path):
         sweep_df = pd.read_csv(master_log_path)
         print("\n📜 Final sweep results:\n")
-        print(sweep_df)
+        print(sweep_df.sort_values(by = "val_rel_mae", ascending = False))
 
 if __name__ == '__main__':
 

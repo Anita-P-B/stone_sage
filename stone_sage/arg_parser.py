@@ -14,5 +14,7 @@ def get_args():
     parser.add_argument('--epochs', type=int, default=None, help="Number of epochs in train.")
     parser.add_argument('--sweep_name', type=str, default="default",
                         help="Name for the sweep run folder.")
+    parser.add_argument('--sweep_path', type=str,
+                        help="paht of sweep log file")
     args = parser.parse_args()
     return args
