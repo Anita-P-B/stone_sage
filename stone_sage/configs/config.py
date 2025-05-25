@@ -15,18 +15,18 @@ class Config:
         TEST_RATIO = 0.1,
 
         # General constants
-        BATCH_SIZE=32,
-        EPOCHS=100,
-        MODEL = "tiny_cnn" , # set different options in the future
+        BATCH_SIZE=16,
+        EPOCHS=200,
+        MODEL = "wide_shallow" , # set different options in the future
         N_BEST_CHECKPOINTS = 3, # number of best checkpoints to save
         LOSS = "mae",
         OPTIMIZER = "adam" ,
-        HIDDEN_DIMS = [32, 16],
-        LEARNING_RATE=1e-4,
+        HIDDEN_DIMS = [32, 16, 16, 8],
+        LEARNING_RATE=0.001,
         SCHEDULER = True, # Set to False to disable learning rate scheduler
         DROPOUT = 0,
         WEIGHT_DECAY = 1e-4,
-        AUGMENTATION_PROB=0.3,
+        AUGMENTATION_PROB=0,
         NORM=None,  # None|"mean"
 
         # Scheduler Config
@@ -46,7 +46,8 @@ class Config:
         SWEEP_MODE = False,
 
         # Debug
-        DEBUG = False
+        DEBUG = False,
+        OVERFIT_TEST = False
 
 
 
@@ -99,6 +100,7 @@ class Config:
 
         #Debug
         self.DEBUG = DEBUG
+        self.OVERFIT_TEST = False
 
     def update_from_dict(self, config_dict: dict, verbose=True):
         for key, value in config_dict.items():

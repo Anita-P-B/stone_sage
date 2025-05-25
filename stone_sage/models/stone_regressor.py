@@ -34,7 +34,7 @@ class StoneRegressor(nn.Module):
         for h in configs.HIDDEN_DIMS:
             layers.append(nn.Linear(prev_dim, h))
             layers.append(nn.ReLU())
-            layers.append(nn.Dropout(configs.DROPOUT))
+            layers.append(nn.Dropout(configs.DROPOUT) if configs.DROPOUT > 0 else nn.Identity())
             prev_dim = h
         layers.append(nn.Linear(prev_dim, 1))
         return StoneRegressor(layers)
@@ -58,7 +58,7 @@ class StoneRegressor(nn.Module):
         for h in hidden_dims:
             layers.append(nn.Linear(prev_dim, h))
             layers.append(nn.ReLU())
-            layers.append(nn.Dropout(dropout))
+            layers.append(nn.Dropout(dropout) if dropout > 0 else nn.Identity())
             prev_dim = h
         layers.append(nn.Linear(prev_dim, 1))
         return StoneRegressor(layers)

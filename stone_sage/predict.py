@@ -10,8 +10,7 @@ import json
 from stone_sage.utils.utils import update_configs_with_dict, save_evaluation_summary, relative_mae_percentage
 from stone_sage.utils.dict_to_class import DotDict
 from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error, r2_score
-import numpy as np
+from stone_sage.datasets.dataset_utils import get_train_mean_and_std
 
 class Predictor:
     def __init__(self, user_configs):
@@ -39,11 +38,7 @@ class Predictor:
         self.configs = update_configs_with_dict(configs_obj, user_configs,self.debug)
 
     def load_model(self, input_dim):
-        model = StoneRegressor(
-            input_dim=input_dim,
-            hidden_dims=self.configs.HIDDEN_DIMS,
-            dropout=self.configs.DROPOUT,
-        )
+        model = StoneRegressor.build(self.configs, input_dim)
         checkpoint = torch.load(self.configs.CHECKPOINT_PATH, map_location=self.device)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(self.device)
@@ -72,7 +67,12 @@ class Predictor:
         df_path = os.path.join(self.run_dir, "dataset_with_partitions.csv")
         df = pd.read_csv(df_path)
 
-        dataset = StoneDataset(df, target_column=self.configs.TARGET_COLUMN)
+
+
+        train_df = df[df["partition"] == "train"]
+        mean, std = get_train_mean_and_std(train_df, self.configs.TARGET_COLUMN)
+
+        dataset = StoneDataset(df, target_column=self.configs.TARGET_COLUMN, mean=mean, std=std)
         loader = DataLoader(dataset, batch_size=self.configs.BATCH_SIZE)
 
         # Load model

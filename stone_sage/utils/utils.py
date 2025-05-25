@@ -8,6 +8,7 @@ from sklearn.metrics import mean_absolute_error
 import numpy as np
 import pandas as pd
 import re
+from torch.utils.data import DataLoader
 
 
 def update_configs_with_dict(config_obj, override_dict, debug=False):
@@ -170,3 +171,19 @@ def extract_val_loss(filename):
         except ValueError:
             return float("inf")
     return float("inf")
+
+def overfit_mode(train_set, generator):
+    # Use a small subset of training data
+    subset_size = 32
+    subset_indices = list(range(subset_size))
+    tiny_train = torch.utils.data.Subset(train_set, subset_indices)
+
+    # Use same loader for both train and val
+    tiny_loader = DataLoader(
+        tiny_train,
+        batch_size=subset_size,
+        shuffle=True,
+        generator=generator
+    )
+    return tiny_loader
+

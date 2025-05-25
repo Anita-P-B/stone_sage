@@ -6,12 +6,14 @@ from torch.utils.data import DataLoader
 
 from stone_sage.arg_parser import get_args
 from stone_sage.configs.config import Config
-from stone_sage.datasets.dataset_utils import load_or_download_data, split_and_save_partitions
+from stone_sage.datasets.dataset_utils import (load_or_download_data, split_and_save_partitions,
+                                               get_train_mean_and_std)
 from stone_sage.datasets.partition_analysis import analyze_partitioned_data
 from stone_sage.datasets.stone_dataset import StoneDataset
 from stone_sage.models.stone_regressor import StoneRegressor
 from stone_sage.train import Trainer
-from stone_sage.utils.utils import update_configs_with_dict, get_loss_func, get_optimizer, save_run_state
+from stone_sage.utils.utils import (update_configs_with_dict, get_loss_func, get_optimizer,
+                                    save_run_state, overfit_mode)
 
 
 def main(sweep_configs=None, user_configs=None, sweep=False):
@@ -28,6 +30,10 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
     if device.type == 'cuda':
         print(f"🧠 GPU name: {torch.cuda.get_device_name(device)}")
         print(f"🧮 Memory available: {torch.cuda.get_device_properties(device).total_memory // (1024 ** 2)} MB")
+
+    # set random seed for reproducability
+    g = torch.Generator()
+    g.manual_seed(configs.SPLIT_SEED)
 
     # get data
     df = load_or_download_data(
@@ -58,10 +64,14 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
         plot_statistics=configs.PLOT_STATISTICS
     )
 
-    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN)
-    train_loader = DataLoader(train_set, batch_size=configs.BATCH_SIZE, shuffle=configs.SHUFFLE)
-    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN)
-    val_loader = DataLoader(val_set, batch_size=configs.BATCH_SIZE, shuffle=configs.SHUFFLE)
+    mean, std = get_train_mean_and_std(train_df, configs.TARGET_COLUMN)
+
+    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std)
+    train_loader = DataLoader(train_set, batch_size=configs.BATCH_SIZE,
+                              shuffle=configs.SHUFFLE, generator=g)
+    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std)
+    val_loader = DataLoader(val_set, batch_size=configs.BATCH_SIZE,
+                            shuffle=configs.SHUFFLE, generator=g)
 
     input_dim = train_set.input_dim
     # get model loss and optimizer
@@ -74,8 +84,20 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
     # save run configurations
     save_run_state(configs=configs, run_dir=run_dir)
     # Train
-    trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir,
-                      n_best_checkpoints=configs.N_BEST_CHECKPOINTS)
+
+
+    if configs.OVERFIT_TEST:
+        print("🔬 Running overfit test on a tiny subset...")
+
+        tiny_loader = overfit_mode(train_set, g)
+        # Train only on tiny_loader
+        trainer = Trainer(model, optimizer, loss, tiny_loader, tiny_loader, run_dir,
+                          n_best_checkpoints=configs.N_BEST_CHECKPOINTS)
+    else:
+        trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir,
+                          n_best_checkpoints=configs.N_BEST_CHECKPOINTS)
+
+
     trainer.train(num_epochs=configs.EPOCHS)
 
 

@@ -13,7 +13,7 @@ class TinyCNN(nn.Module):
             nn.ReLU(),
             nn.AdaptiveAvgPool1d(1),
             nn.Flatten(),
-            nn.Dropout(dropout),
+            nn.Dropout(dropout) if dropout > 0 else nn.Identity(),
             nn.Linear(16, 1)
         )
 

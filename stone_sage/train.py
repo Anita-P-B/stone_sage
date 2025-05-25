@@ -1,7 +1,8 @@
 import torch
 from torch import nn
 from tqdm import tqdm
-from stone_sage.utils.utils import save_checkpoint, save_evaluation_summary, relative_mae_percentage, build_epoch_metrics
+from stone_sage.utils.utils import save_checkpoint, save_evaluation_summary, relative_mae_percentage, \
+    build_epoch_metrics, extract_val_loss
 import matplotlib.pyplot as plt
 import csv
 import os
@@ -11,7 +12,8 @@ import matplotlib.ticker as mticker
 
 
 class Trainer:
-    def __init__(self, model, optimizer, loss, train_loader, val_loader, run_dir, scheduler=None, device=None):
+    def __init__(self, model, optimizer, loss, train_loader, val_loader, run_dir, scheduler=None, device=None,
+                 n_best_checkpoints=3):
         self.run_dir = run_dir
         os.makedirs(run_dir, exist_ok=True)
         self.model = model
@@ -31,6 +33,7 @@ class Trainer:
 
         # set model
         self.model.to(self.device)
+        self.n_best_checkpoints = n_best_checkpoints
 
     def save_history_and_plot(self):
         # get field names dynamically
@@ -127,14 +130,18 @@ class Trainer:
                 if not self.run_dir:
                     raise ValueError("⚠️ Cannot save checkpoint: `checkpoint_path` is not set or is empty.")
 
-
                 save_checkpoint(
                     run_dir=self.run_dir,
                     model=self.model,
                     optimizer=self.optimizer,
                     scheduler=self.scheduler,
                     epoch_metrics=epoch_metrics
-                    )
+                )
+                # keep only the best n checkpoints
+                checkpoint_files = [f for f in os.listdir(self.run_dir) if f.endswith(".pt")]
+                sorted_checkpoints = sorted(checkpoint_files, key=extract_val_loss)
+                if len(checkpoint_files) > self.n_best_checkpoints:
+                    os.remove(os.path.join(self.run_dir,  sorted_checkpoints[-1]))
 
         self.save_history_and_plot()
 

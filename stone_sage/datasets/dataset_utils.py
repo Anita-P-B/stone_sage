@@ -132,4 +132,10 @@ def validate_partition_leakage(train_df, val_df, test_df, id_columns=None):
                          f"Val/Test overlap: {len(overlap_vt)}")
     print("✅ No partition leakage detected.")
 
+def get_train_mean_and_std(train_df, target_column):
+    train_features = train_df.drop(columns=[target_column, 'partition']).values.astype('float32')
+    mean = train_features.mean(axis=0)
+    std = train_features.std(axis=0) + 1e-8  # avoid division by zero
+    return mean, std
+
 
