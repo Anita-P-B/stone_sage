@@ -1,4 +1,3 @@
-
 from stone_sage.arg_parser import get_args
 import torch
 import os
@@ -12,13 +11,13 @@ from stone_sage.utils.dict_to_class import DotDict
 from sklearn.metrics import mean_absolute_error
 from stone_sage.datasets.dataset_utils import get_train_mean_and_std
 
+
 class Predictor:
     def __init__(self, user_configs):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.configs = {}
         self.debug = user_config.get("DEBUG", False)
         self._load_configs(user_configs)
-
 
     def _load_configs(self, user_configs):
         checkpoint_path = user_configs.get("CHECKPOINT_PATH")
@@ -35,7 +34,7 @@ class Predictor:
             configs = json.load(f)
         configs_obj = DotDict(configs)
 
-        self.configs = update_configs_with_dict(configs_obj, user_configs,self.debug)
+        self.configs = update_configs_with_dict(configs_obj, user_configs, self.debug)
 
     def load_model(self, input_dim):
         model = StoneRegressor.build(self.configs, input_dim)
@@ -59,7 +58,6 @@ class Predictor:
             metrics[f"{partition}_mae"] = mae
             metrics[f"{partition}_rel_mae"] = rel_mae
 
-
         save_evaluation_summary(self.run_dir, metrics)
 
     def predict(self):
@@ -67,12 +65,12 @@ class Predictor:
         df_path = os.path.join(self.run_dir, "dataset_with_partitions.csv")
         df = pd.read_csv(df_path)
 
-
-
         train_df = df[df["partition"] == "train"]
-        mean, std = get_train_mean_and_std(train_df, self.configs.TARGET_COLUMN)
+        mean, std, target_mean, target_std = get_train_mean_and_std(train_df,
+                                self.configs.TARGET_COLUMN)
 
-        dataset = StoneDataset(df, target_column=self.configs.TARGET_COLUMN, mean=mean, std=std)
+        dataset = StoneDataset(df, target_column=self.configs.TARGET_COLUMN,
+                               mean=mean, std=std, target_mean=target_mean, target_std=target_std)
         loader = DataLoader(dataset, batch_size=self.configs.BATCH_SIZE)
 
         # Load model
@@ -86,10 +84,14 @@ class Predictor:
                 inputs = inputs.to(self.device)
                 outputs = model(inputs)
                 all_preds.extend(outputs.cpu().numpy().flatten())
+        target = train_df[self.configs.TARGET_COLUMN].values.astype('float32')
+        true_vals = target.cpu().numpy() * target_std + target_mean
+        pred_vals = all_preds.cpu().numpy() * target_std + target_mean
 
         # Output results
         out_path = os.path.join(self.run_dir, "predictions.csv")
-        df["prediction"] = all_preds
+        df["true_values"] = true_vals
+        df["prediction"] = pred_vals
         df.to_csv(out_path, index=False)
         print(f"✅ Predictions saved to {out_path}")
 

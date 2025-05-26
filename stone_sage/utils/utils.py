@@ -110,12 +110,22 @@ def save_evaluation_summary(run_dir, metrics_dict):
     print(f"📊 Evaluation results saved to: {file_path}")
 
 
-def relative_mae_percentage(y_true, y_pred):
-    mae = mean_absolute_error(y_true, y_pred)
-    mean_target = np.mean(y_true)
+def relative_mae_percentage(y_true, y_pred, target_std, target_mean):
+    y_pred_real = y_pred * target_std + target_mean
+    y_true_real = y_true * target_std + target_mean
+
+    mae = mean_absolute_error(y_true_real, y_pred_real)
+    mean_target = np.mean(np.abs(y_true_real))
     if mean_target == 0:
         return np.inf  # Prevent division by zero
     return (mae / mean_target) * 100
+
+def smape(y_true, y_pred, target_std, target_mean):
+    y_pred_real = y_pred * target_std + target_mean
+    y_true_real = y_true * target_std + target_mean
+    smape = np.mean(2 * np.abs(y_pred_real - y_true_real) / (np.abs(y_pred_real) + np.abs(y_true_real))) * 100
+    return smape
+
 
 
 def build_epoch_metrics(epoch, loss_dict, metric_dict):

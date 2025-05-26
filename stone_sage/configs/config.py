@@ -17,12 +17,12 @@ class Config:
         # General constants
         BATCH_SIZE=16,
         EPOCHS=200,
-        MODEL = "wide_shallow" , # set different options in the future
+        MODEL = "mlp" , # set different options in the future
         N_BEST_CHECKPOINTS = 3, # number of best checkpoints to save
         LOSS = "mae",
         OPTIMIZER = "adam" ,
-        HIDDEN_DIMS = [32, 16, 16, 8],
-        LEARNING_RATE=0.001,
+        HIDDEN_DIMS =  [128, 64, 32],
+        LEARNING_RATE=0.01,
         SCHEDULER = True, # Set to False to disable learning rate scheduler
         DROPOUT = 0,
         WEIGHT_DECAY = 1e-4,

@@ -64,12 +64,14 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
         plot_statistics=configs.PLOT_STATISTICS
     )
 
-    mean, std = get_train_mean_and_std(train_df, configs.TARGET_COLUMN)
+    mean, std, target_mean, target_std = get_train_mean_and_std(train_df, configs.TARGET_COLUMN)
 
-    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std)
+    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std,
+                             target_mean=target_mean, target_std=target_std)
     train_loader = DataLoader(train_set, batch_size=configs.BATCH_SIZE,
                               shuffle=configs.SHUFFLE, generator=g)
-    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std)
+    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std,
+                           target_mean=target_mean, target_std=target_std)
     val_loader = DataLoader(val_set, batch_size=configs.BATCH_SIZE,
                             shuffle=configs.SHUFFLE, generator=g)
 
@@ -92,10 +94,30 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
         tiny_loader = overfit_mode(train_set, g)
         # Train only on tiny_loader
         trainer = Trainer(model, optimizer, loss, tiny_loader, tiny_loader, run_dir,
-                          n_best_checkpoints=configs.N_BEST_CHECKPOINTS)
+                          n_best_checkpoints=configs.N_BEST_CHECKPOINTS,
+                          target_mean= target_mean,target_std= target_std,
+                          debug=configs.DEBUG)
+        if configs.DEBUG:
+            for x, y in tiny_loader:
+                x, y = x.to(device), y.to(device)
+                model = model.to(device)
+                model.eval()  # ensure deterministic output
+
+                with torch.no_grad():
+                    pred = model(x)
+
+                print("🔍 Initial prediction:", pred.squeeze().cpu().numpy())
+                print("🎯 Target:             ", y.squeeze().cpu().numpy())
+                print("denormalized Prediction:", (pred.squeeze().cpu().numpy() * target_std + target_mean))
+                print("debirmalized Target:    ", (y.squeeze().cpu().numpy() * target_std + target_mean))
+                break
+
+
     else:
         trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir,
-                          n_best_checkpoints=configs.N_BEST_CHECKPOINTS)
+                          n_best_checkpoints=configs.N_BEST_CHECKPOINTS,
+                          target_mean=target_mean, target_std=target_std,
+                          debug=configs.DEBUG)
 
 
     trainer.train(num_epochs=configs.EPOCHS)

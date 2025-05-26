@@ -134,8 +134,13 @@ def validate_partition_leakage(train_df, val_df, test_df, id_columns=None):
 
 def get_train_mean_and_std(train_df, target_column):
     train_features = train_df.drop(columns=[target_column, 'partition']).values.astype('float32')
+    train_target = train_df[target_column].values.astype('float32')
+
     mean = train_features.mean(axis=0)
     std = train_features.std(axis=0) + 1e-8  # avoid division by zero
-    return mean, std
+
+    target_mean = train_target.mean()
+    target_std = train_target.std() + 1e-8  # avoid division by zero
+    return mean, std, target_mean, target_std
 
 

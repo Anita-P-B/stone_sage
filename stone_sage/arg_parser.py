@@ -10,6 +10,8 @@ def get_args():
     parser.add_argument('--force_download', action='store_true', default=None,
                         help="set on for redownload the dataset")
     parser.add_argument('--save_path', type=str, default=None, help="Path to save the model.")
+    parser.add_argument('--optimizer', type=str, help="type of optimizer. options: adam| sgd|adamw")
+    parser.add_argument('--loss', type=str, help="type of loss function. options: mae|mse|huber")
     parser.add_argument('--data_path', type=str, default="./data\concrete_data.csv", help="Path of dataset csv file.")
     parser.add_argument('--checkpoint_path', type=str, default=None, help="path for saved checkpoint "
                                                                           "for evaluattion or resume training")
