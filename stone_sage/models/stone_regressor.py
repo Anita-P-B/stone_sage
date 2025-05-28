@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from stone_sage.models.tiny_cnn import TinyCNN
+from stone_sage.models.shallow_deep import ShallowDeep
 
 class StoneRegressor(nn.Module):
     def __init__(self, layers: nn.ModuleList):
@@ -19,7 +20,8 @@ class StoneRegressor(nn.Module):
             "mlp": StoneRegressor._build_mlp,
             "tiny_deep": StoneRegressor._build_tiny_deep,
             "wide_shallow": StoneRegressor._build_wide_shallow,
-            "tiny_cnn": StoneRegressor._build_tiny_cnn
+            "tiny_cnn": StoneRegressor._build_tiny_cnn,
+            "shallow_deep": StoneRegressor._build_shallow_deep
         }
 
         if model_type not in model_dispatch:
@@ -50,6 +52,10 @@ class StoneRegressor(nn.Module):
         # Fewer layers, wider dims
         dims = [128]
         return StoneRegressor._from_dims(input_dim, dims, configs.DROPOUT)
+
+    @staticmethod
+    def _build_shallow_deep(configs, input_dim):
+        return ShallowDeep(input_dim, configs.DROPOUT)
 
     @staticmethod
     def _from_dims(input_dim, hidden_dims, dropout):

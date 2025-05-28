@@ -17,7 +17,7 @@ def get_args():
                                                                           "for evaluattion or resume training")
     parser.add_argument('--epochs', type=int, default=None, help="Number of epochs in train.")
     parser.add_argument('--learning_rate', type=float, help="Trainning learning rate")
-    parser.add_argument('--model', type=str, default="mlp", help="Model archetecture.")
+    parser.add_argument('--model', type=str, help="Model archetecture.")
     parser.add_argument('--sweep_name', type=str, default="default",
                         help="Name for the sweep run folder.")
     parser.add_argument('--sweep_path', type=str,
