@@ -177,7 +177,8 @@ class Trainer:
 
         self.save_history_and_plot()
 
-        final_metrics = self.history[-1]
+        best_idx = np.argmin([entry["val_mae"] for entry in self.history])
+        final_metrics = self.history[best_idx]
         save_evaluation_summary(self.run_dir, final_metrics)
 
     def _train_one_epoch(self, epoch, total_epochs):

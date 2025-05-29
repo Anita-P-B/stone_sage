@@ -6,11 +6,11 @@ from stone_sage.models.stone_regressor import StoneRegressor  # adapt to your ac
 from stone_sage.datasets.stone_dataset import StoneDataset
 from torch.utils.data import DataLoader
 import json
-from stone_sage.utils.utils import update_configs_with_dict, save_evaluation_summary, relative_mae_percentage
+from stone_sage.utils.utils import update_configs_with_dict, save_evaluation_summary
 from stone_sage.utils.dict_to_class import DotDict
 from sklearn.metrics import mean_absolute_error
 from stone_sage.datasets.dataset_utils import get_train_mean_and_std
-
+import numpy as np
 
 class Predictor:
     def __init__(self, user_configs):
@@ -53,10 +53,12 @@ class Predictor:
             predictions = part_df["prediction"].values
 
             mae = mean_absolute_error(true_targets, predictions)
-            rel_mae = relative_mae_percentage(true_targets, predictions)
-
+            rel_mae = self.relative_mae_percentage(true_targets, predictions)
+            smape = self.smape(true_targets, predictions)
             metrics[f"{partition}_mae"] = mae
             metrics[f"{partition}_rel_mae"] = rel_mae
+            metrics[f"{partition}_smape"] = smape
+
 
         save_evaluation_summary(self.run_dir, metrics)
 
@@ -79,14 +81,21 @@ class Predictor:
 
         # Make predictions
         all_preds = []
+        all_targets = []
         with torch.no_grad():
-            for inputs, _ in loader:
+            for inputs, targets in loader:
                 inputs = inputs.to(self.device)
+                targets = targets.to(self.device)
                 outputs = model(inputs)
                 all_preds.extend(outputs.cpu().numpy().flatten())
-        target = train_df[self.configs.TARGET_COLUMN].values.astype('float32')
-        true_vals = target.cpu().numpy() * target_std + target_mean
-        pred_vals = all_preds.cpu().numpy() * target_std + target_mean
+                all_targets.extend(targets.cpu().numpy().flatten())
+
+        # Denormalize
+        pred_vals = np.array(all_preds) * target_std + target_mean
+        true_vals = np.array(all_targets) * target_std + target_mean
+        if self.debug:
+            print("Min target:", np.min(true_vals))
+            print("Min prediction:", np.min(pred_vals))
 
         # Output results
         out_path = os.path.join(self.run_dir, "predictions.csv")
@@ -96,6 +105,17 @@ class Predictor:
         print(f"✅ Predictions saved to {out_path}")
 
         self.calculate_evaluation_results(df)
+
+    def relative_mae_percentage(self,y_true, y_pred):
+        mae = mean_absolute_error(y_true, y_pred)
+        mean_target = np.mean(np.abs(y_true))
+        if mean_target == 0:
+            return np.inf  # Prevent division by zero
+        return (mae / mean_target) * 100
+
+    def smape(self,y_true, y_pred):
+        smape = np.mean(2 * np.abs(y_pred - y_true) / (np.abs(y_pred) + np.abs(y_true))) * 100
+        return smape
 
 
 if __name__ == '__main__':

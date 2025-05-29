@@ -17,17 +17,14 @@ class Config:
         # General constants
         BATCH_SIZE=16,
         EPOCHS=200,
-        MODEL = "mlp" , # set different options in the future
+        MODEL = "shallow_deep" , # set different options in the future
         N_BEST_CHECKPOINTS = 3, # number of best checkpoints to save
         LOSS = "mae",
         OPTIMIZER = "adam" ,
         HIDDEN_DIMS =  [128, 64, 32],
-        LEARNING_RATE=0.01,
+        LEARNING_RATE=0.0005,
         SCHEDULER = True, # Set to False to disable learning rate scheduler
         DROPOUT = 0,
-        WEIGHT_DECAY = 1e-4,
-        AUGMENTATION_PROB=0,
-        NORM=None,  # None|"mean"
 
         # Scheduler Config
         MODE = "min",
@@ -77,9 +74,6 @@ class Config:
         self.LEARNING_RATE = LEARNING_RATE
         self.SCHEDULER = SCHEDULER
         self.DROPOUT = DROPOUT
-        self.WEIGHT_DECAY = WEIGHT_DECAY
-        self.AUGMENTATION_PROB = AUGMENTATION_PROB
-        self.NORM = NORM
 
         # Scheduler Config
         self.MODE = MODE
@@ -100,7 +94,7 @@ class Config:
 
         #Debug
         self.DEBUG = DEBUG
-        self.OVERFIT_TEST = False
+        self.OVERFIT_TEST = OVERFIT_TEST
 
     def update_from_dict(self, config_dict: dict, verbose=True):
         for key, value in config_dict.items():
