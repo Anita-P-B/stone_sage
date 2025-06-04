@@ -2,19 +2,20 @@ import torch
 from torch import nn
 from tqdm import tqdm
 from stone_sage.utils.utils import save_checkpoint, save_evaluation_summary, relative_mae_percentage, \
-    build_epoch_metrics, extract_val_loss, smape
+    build_epoch_metrics, extract_val_loss, smape, calculate_mean_absolute_error
 import matplotlib.pyplot as plt
 import csv
 import os
 import numpy as np
-from sklearn.metrics import mean_absolute_error
+
 import matplotlib.ticker as mticker
 
 
 class Trainer:
     def __init__(self, model, optimizer, loss, train_loader, val_loader, run_dir,
+                 target_mean, target_std,
                  scheduler=None, device=None,
-                 n_best_checkpoints=3, target_mean = None, target_std = None,
+                 n_best_checkpoints=3,
                  debug = False):
         self.run_dir = run_dir
         os.makedirs(run_dir, exist_ok=True)
@@ -25,21 +26,24 @@ class Trainer:
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         self.loss_fn = loss  # MAE for regression
         self.metrics = {
+            "mae": calculate_mean_absolute_error,
             "rel_mae_percent": relative_mae_percentage,
             "smape": smape
             # add more here if needed
         }
+
+        self.target_mean = target_mean
+        self.target_std = target_std
+
         self.scheduler = scheduler
         self.best_loss = float("inf")
+
         # training metrics
         self.history = []
 
         # set model
         self.model.to(self.device)
         self.n_best_checkpoints = n_best_checkpoints
-
-        self.target_mean = target_mean
-        self.target_std = target_std
 
         self.debug = debug
 
@@ -114,7 +118,7 @@ class Trainer:
             # train step
             train_loss, train_preds, train_targets = self._train_one_epoch(epoch, num_epochs)
             # Calculate metrics
-            train_mae = mean_absolute_error(train_targets, train_preds)
+            train_mae = self.metrics["mae"](train_targets, train_preds, self.target_mean, self.target_std)
             train_rel_mae = self.metrics["rel_mae_percent"](train_targets, train_preds,
                                                             self.target_mean, self.target_std)
             train_smape = self.metrics["smape"](train_targets, train_preds,
@@ -130,7 +134,7 @@ class Trainer:
             val_loss, val_preds, val_targets = self._validate_one_epoch(epoch)
 
             # calculate validation metrics
-            val_mae = mean_absolute_error(val_targets, val_preds)
+            val_mae = self.metrics["mae"](val_targets, val_preds, self.target_mean, self.target_std)
             val_rel_mae = self.metrics["rel_mae_percent"](val_targets, val_preds,
                                                           self.target_mean, self.target_std)
             val_smape = self.metrics["smape"](val_targets, val_preds,
@@ -207,7 +211,7 @@ class Trainer:
                         print("True:", (targets * self.target_std + self.target_mean).cpu().numpy().flatten())
                         self.model.train()
 
-            total_loss += loss.item() * inputs.size(0)
+            total_loss += np.float32(loss.item() * inputs.size(0))
             all_preds.append(predictions.detach().cpu().numpy())  # converts to numpy for calculations
             all_targets.append(targets.detach().cpu().numpy())
 
@@ -229,7 +233,7 @@ class Trainer:
                 predictions =  self.model(inputs)
                 loss = self.loss_fn(predictions, targets)
 
-                total_loss += loss.item() * inputs.size(0)
+                total_loss += np.float32(loss.item() * inputs.size(0))
                 all_preds.append(predictions.detach().cpu().numpy())
                 all_targets.append(targets.detach().cpu().numpy())
 

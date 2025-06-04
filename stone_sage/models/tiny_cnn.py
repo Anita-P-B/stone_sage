@@ -1,5 +1,5 @@
 # model/tiny_cnn.py
-
+import torch
 import torch.nn as nn
 
 class TinyCNN(nn.Module):
@@ -19,3 +19,4 @@ class TinyCNN(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+

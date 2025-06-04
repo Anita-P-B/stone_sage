@@ -46,7 +46,7 @@ def get_loss_func(loss_name):
         raise ValueError(f"❌ Loss function '{loss_name}' not recognized. Available: {list(losses.keys())}")
 
 
-def save_run_state(configs, run_dir):
+def save_run_state(configs, run_dir, **extra_metadata):
     """Save training configuration as a JSON file, serializing any non-JSON-safe values as strings."""
     # Create timestamped folder
     os.makedirs(run_dir, exist_ok=True)
@@ -60,6 +60,14 @@ def save_run_state(configs, run_dir):
             configs_dict[k] = v
         except (TypeError, OverflowError):
             configs_dict[k] = str(v)  # fallback: save as string
+
+    # Add extra metadata to configs_dict
+    for key, value in extra_metadata.items():
+        try:
+            json.dumps(value)
+            configs_dict[key] = value
+        except (TypeError, OverflowError):
+            configs_dict[key] = str(value)
 
     config_path = os.path.join(run_dir, "train_config.json")
     # Save CONSTS
@@ -108,21 +116,33 @@ def save_evaluation_summary(run_dir, metrics_dict):
         writer.writerow(metrics_dict)
 
     print(f"📊 Evaluation results saved to: {file_path}")
+def denormalize(y, target_mean, target_std):
+    epsilon = 1e-6
+    y = np.array(y)
+    y_log = y*target_std + target_mean
+    y_real = (np.exp(y_log) - epsilon).astype(np.float32)
+    return y_real
+
+def calculate_mean_absolute_error(y_true, y_pred, target_mean, target_std):
+    y_pred_real = denormalize(y_pred, target_mean, target_std)
+    y_true_real = denormalize(y_true, target_mean, target_std)
+    mae = np.float32(mean_absolute_error(y_true_real, y_pred_real))
+    return mae
 
 
-def relative_mae_percentage(y_true, y_pred, target_std, target_mean):
-    y_pred_real = y_pred * target_std + target_mean
-    y_true_real = y_true * target_std + target_mean
+def relative_mae_percentage(y_true, y_pred, target_mean, target_std):
+    y_pred_real = denormalize(y_pred, target_mean, target_std)
+    y_true_real = denormalize(y_true, target_mean, target_std)
 
-    mae = mean_absolute_error(y_true_real, y_pred_real)
+    mae = np.float32(mean_absolute_error(y_true_real, y_pred_real))
     mean_target = np.mean(np.abs(y_true_real))
     if mean_target == 0:
         return np.inf  # Prevent division by zero
     return (mae / mean_target) * 100
 
 def smape(y_true, y_pred, target_std, target_mean):
-    y_pred_real = y_pred * target_std + target_mean
-    y_true_real = y_true * target_std + target_mean
+    y_pred_real = denormalize(y_pred, target_mean, target_std)
+    y_true_real = denormalize(y_true, target_mean, target_std)
     smape = np.mean(2 * np.abs(y_pred_real - y_true_real) / (np.abs(y_pred_real) + np.abs(y_true_real))) * 100
     return smape
 

@@ -13,7 +13,7 @@ from stone_sage.datasets.stone_dataset import StoneDataset
 from stone_sage.models.stone_regressor import StoneRegressor
 from stone_sage.train import Trainer
 from stone_sage.utils.utils import (update_configs_with_dict, get_loss_func, get_optimizer,
-                                    save_run_state, overfit_mode)
+                                    save_run_state, overfit_mode, extract_val_loss)
 
 
 def main(sweep_configs=None, user_configs=None, sweep=False):
@@ -64,14 +64,11 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
         plot_statistics=configs.PLOT_STATISTICS
     )
 
-    mean, std, target_mean, target_std = get_train_mean_and_std(train_df, configs.TARGET_COLUMN)
-
-    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std,
-                             target_mean=target_mean, target_std=target_std)
+    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN, debug=configs.DEBUG)
+    features_mean, features_std, targets_mean, targets_std = train_set.mean_features, train_set.std_features, train_set.mean_targets, train_set.std_targets
     train_loader = DataLoader(train_set, batch_size=configs.BATCH_SIZE,
                               shuffle=configs.SHUFFLE, generator=g)
-    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN, mean=mean, std=std,
-                           target_mean=target_mean, target_std=target_std)
+    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN)
     val_loader = DataLoader(val_set, batch_size=configs.BATCH_SIZE,
                             shuffle=configs.SHUFFLE, generator=g)
 
@@ -94,8 +91,8 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
         tiny_loader = overfit_mode(train_set, g)
         # Train only on tiny_loader
         trainer = Trainer(model, optimizer, loss, tiny_loader, tiny_loader, run_dir,
+                          targets_mean, targets_std,
                           n_best_checkpoints=configs.N_BEST_CHECKPOINTS,
-                          target_mean= target_mean,target_std= target_std,
                           debug=configs.DEBUG)
         if configs.DEBUG:
             for x, y in tiny_loader:
@@ -103,20 +100,10 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
                 model = model.to(device)
                 model.eval()  # ensure deterministic output
 
-                with torch.no_grad():
-                    pred = model(x)
-
-                print("🔍 Initial prediction:", pred.squeeze().cpu().numpy())
-                print("🎯 Target:             ", y.squeeze().cpu().numpy())
-                print("denormalized Prediction:", (pred.squeeze().cpu().numpy() * target_std + target_mean))
-                print("debirmalized Target:    ", (y.squeeze().cpu().numpy() * target_std + target_mean))
-                break
-
-
     else:
         trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir,
+                          targets_mean, targets_std,
                           n_best_checkpoints=configs.N_BEST_CHECKPOINTS,
-                          target_mean=target_mean, target_std=target_std,
                           debug=configs.DEBUG)
 
 

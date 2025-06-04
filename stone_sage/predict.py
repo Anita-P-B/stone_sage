@@ -6,11 +6,12 @@ from stone_sage.models.stone_regressor import StoneRegressor  # adapt to your ac
 from stone_sage.datasets.stone_dataset import StoneDataset
 from torch.utils.data import DataLoader
 import json
-from stone_sage.utils.utils import update_configs_with_dict, save_evaluation_summary
+from stone_sage.utils.utils import update_configs_with_dict, save_evaluation_summary, denormalize
 from stone_sage.utils.dict_to_class import DotDict
 from sklearn.metrics import mean_absolute_error
 from stone_sage.datasets.dataset_utils import get_train_mean_and_std
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Predictor:
     def __init__(self, user_configs):
@@ -44,13 +45,32 @@ class Predictor:
         model.eval()
         return model
 
-    def calculate_evaluation_results(self, df):
+    def calculate_evaluation_results(self, df, target_mean, target_std):
         partitions = ["train", "val", "test"]
         metrics = {}
         for partition in partitions:
             part_df = df[df["partition"] == partition]
-            true_targets = part_df[self.configs.TARGET_COLUMN].values
+            true_targets = part_df["true_values"].values
             predictions = part_df["prediction"].values
+            if self.debug:
+
+                target_mean = true_targets.mean()
+                target_std = true_targets.std()
+
+                normalized = (true_targets - target_mean) / target_std
+                reconstructed = normalized * target_std + target_mean
+                # usefull one line sanity check
+                # assert np.allclose(reconstructed, true_targets, atol=1e-5)
+                # Compare original and reconstructed
+                absolute_diff = np.abs(reconstructed - true_targets)
+                relative_diff = absolute_diff / np.maximum(np.abs(true_targets), 1e-8)
+                print(f"Partition: {partition}")
+                print(f"Target mean: {float(target_mean):.6f}, Target std: {float(target_std):.6f}")
+                print(f"Max absolute error: {float(absolute_diff.max()):.6f}")
+                print(f"Mean absolute error: {float(absolute_diff.mean()):.6f}")
+                print(f"Max relative error: {100 * float(relative_diff.max()):.4f}%")
+                print(f"Mean relative error: {100 * float(relative_diff.mean()):.4f}%")
+                print("-" * 50)
 
             mae = mean_absolute_error(true_targets, predictions)
             rel_mae = self.relative_mae_percentage(true_targets, predictions)
@@ -68,12 +88,11 @@ class Predictor:
         df = pd.read_csv(df_path)
 
         train_df = df[df["partition"] == "train"]
-        mean, std, target_mean, target_std = get_train_mean_and_std(train_df,
-                                self.configs.TARGET_COLUMN)
+        train_dataset = StoneDataset(train_df, target_column=self.configs.TARGET_COLUMN)
+        target_mean, target_std =  train_dataset.mean_targets, train_dataset.std_targets
 
-        dataset = StoneDataset(df, target_column=self.configs.TARGET_COLUMN,
-                               mean=mean, std=std, target_mean=target_mean, target_std=target_std)
-        loader = DataLoader(dataset, batch_size=self.configs.BATCH_SIZE)
+        dataset = StoneDataset(df, target_column=self.configs.TARGET_COLUMN)
+        loader = DataLoader(dataset, batch_size=self.configs.BATCH_SIZE, shuffle = False)
 
         # Load model
         input_dim = dataset.input_dim  # from property
@@ -91,11 +110,8 @@ class Predictor:
                 all_targets.extend(targets.cpu().numpy().flatten())
 
         # Denormalize
-        pred_vals = np.array(all_preds) * target_std + target_mean
-        true_vals = np.array(all_targets) * target_std + target_mean
-        if self.debug:
-            print("Min target:", np.min(true_vals))
-            print("Min prediction:", np.min(pred_vals))
+        pred_vals = denormalize(all_preds,target_mean, target_std)
+        true_vals = denormalize(all_targets, target_mean, target_std)
 
         # Output results
         out_path = os.path.join(self.run_dir, "predictions.csv")
@@ -103,8 +119,7 @@ class Predictor:
         df["prediction"] = pred_vals
         df.to_csv(out_path, index=False)
         print(f"✅ Predictions saved to {out_path}")
-
-        self.calculate_evaluation_results(df)
+        self.calculate_evaluation_results(df, target_mean, target_std)
 
     def relative_mae_percentage(self,y_true, y_pred):
         mae = mean_absolute_error(y_true, y_pred)

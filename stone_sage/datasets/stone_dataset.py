@@ -1,23 +1,58 @@
 import torch
 from torch.utils.data import Dataset
+import numpy as np
+import matplotlib.pyplot as plt
 
 class StoneDataset(Dataset):
-    def __init__(self, dataframe, target_column, mean=None, std=None, target_mean= None, target_std= None):
-        self.features = dataframe.drop(columns=[target_column, 'partition']).values.astype('float32')
-        self.targets = dataframe[target_column].values.astype('float32').reshape(-1, 1)
+    def __init__(self, dataframe, target_column, debug = False):
+        self.features = dataframe.drop(columns=[target_column, 'partition']).values.astype('float64')
+        self.targets = dataframe[target_column].values.astype('float64').reshape(-1, 1)
 
-        # Normalize if mean and std are provided
-        if mean is not None and std is not None:
-            self.features = (self.features - mean) / std
-        if target_mean is not None and target_std is not None:
-            self.targets = (self.targets - target_mean) / target_std
+        self.debug = debug
+        self.log_features, self.mean_features, self.std_features = self.log_normalization(self.features)
+        self.log_targets, self.mean_targets, self.std_targets = self.log_normalization(self.targets)
 
+
+    def log_normalization(self, y):
+        epsilon = 1e-6
+        log_y = np.log(y + epsilon)
+        mean_log = np.mean(log_y, axis = 0)
+        std_log = np.std(log_y, axis =0)
+        norm_y = (log_y - mean_log) / std_log
+        if self.debug :
+            y_log_reconstructed = norm_y * std_log + mean_log
+            y_reconstructed = np.exp(y_log_reconstructed) - epsilon
+            # Step 6: Compare original and reconstructed
+            abs_diff = np.abs(y - y_reconstructed)
+            rel_diff = abs_diff / (y + epsilon) * 100  # % relative error
+
+            # Display summary
+            print(f"Max absolute error: {abs_diff.max():.6f}")
+            print(f"Max relative error: {rel_diff.max():.6f}%")
+            print(f"Mean relative error: {rel_diff.mean():.6f}%")
+
+            # Optional: plot comparison
+
+
+            plt.figure(figsize=(6, 6))
+            plt.scatter(y, y_reconstructed, alpha=0.5)
+            plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--', label='Ideal')
+            plt.xlabel("Original Target")
+            plt.ylabel("Reconstructed Target")
+            plt.title("Log-Normalization Sanity Check")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+        return norm_y.astype(np.float32), mean_log.astype(np.float32), std_log.astype(np.float32)
     def __len__(self):
-        return len(self.features)
+        return len(self.log_features)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.features[idx]), torch.tensor(self.targets[idx])
+        return (
+            torch.tensor(self.log_features[idx], dtype=torch.float32),
+            torch.tensor(self.log_targets[idx], dtype=torch.float32)
+        )
 
     @property
     def input_dim(self):
-        return self.features.shape[1]
+        return self.log_features.shape[1]

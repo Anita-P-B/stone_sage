@@ -47,7 +47,7 @@ def load_or_download_data(path, force_download=False, expected_checksum=None,
     Returns:
         pd.DataFrame
     """
-    #path = path[0] if isinstance(path, tuple) else path
+
     download_needed = force_download or not os.path.exists(path)
 
     if not download_needed and expected_checksum:
