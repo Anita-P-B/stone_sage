@@ -109,9 +109,29 @@ class Predictor:
                 all_preds.extend(outputs.cpu().numpy().flatten())
                 all_targets.extend(targets.cpu().numpy().flatten())
 
-        # Denormalize
+        # # Denormalize
         pred_vals = denormalize(all_preds,target_mean, target_std)
         true_vals = denormalize(all_targets, target_mean, target_std)
+
+        if self.debug:
+            raw_pred = all_preds[0]
+            denorm_pred = pred_vals[0]
+            raw_target = all_targets[0]
+            denorm_target = true_vals[0]
+            print("Raw prediction (normalized):", raw_pred)
+            print("Prediction (denormalized):", denorm_pred)
+            print("target value (normalized):", raw_target)
+            print("True value (denormalized):", denorm_target)
+
+            mae_norm = mean_absolute_error([raw_pred], [raw_target])
+            mae_denorm = mean_absolute_error([denorm_pred], [denorm_target])
+            print("MAE (normalized):", mae_norm)
+            print("Target std:", target_std)
+            print("Expected denorm MAE:", mae_norm * target_std)
+            print("Actual denorm MAE:", mae_denorm)
+
+        # pred_vals = all_preds
+        # true_vals = pred_vals
 
         # Output results
         out_path = os.path.join(self.run_dir, "predictions.csv")

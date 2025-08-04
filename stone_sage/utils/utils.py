@@ -119,8 +119,8 @@ def save_evaluation_summary(run_dir, metrics_dict):
 def denormalize(y, target_mean, target_std):
     epsilon = 1e-6
     y = np.array(y)
-    y_log = y*target_std + target_mean
-    y_real = (np.exp(y_log) - epsilon).astype(np.float32)
+    y_real = y*target_std + target_mean
+    #y_real = (np.exp(y_log) - epsilon).astype(np.float32)
     return y_real
 
 def calculate_mean_absolute_error(y_true, y_pred, target_mean, target_std):
