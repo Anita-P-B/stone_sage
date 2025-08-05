@@ -116,23 +116,34 @@ def save_evaluation_summary(run_dir, metrics_dict):
         writer.writerow(metrics_dict)
 
     print(f"📊 Evaluation results saved to: {file_path}")
-def denormalize(y, target_mean, target_std):
+
+def denormalize(y, target_mean, target_std, norm_method):
     epsilon = 1e-6
     y = np.array(y)
-    y_real = y*target_std + target_mean
-    #y_real = (np.exp(y_log) - epsilon).astype(np.float32)
+
+    if norm_method is None:
+        y_real = y
+    elif norm_method == "linear":
+        y_real = y * target_std + target_mean
+    elif norm_method == "log":
+        y_log = y * target_std + target_mean
+        y_real = np.exp(y_log) - epsilon
+
+    else:
+        raise ValueError(f"Unsupported normalization type: {norm_method}")
+    y_real = y_real.astype(np.float32)
     return y_real
 
-def calculate_mean_absolute_error(y_true, y_pred, target_mean, target_std):
-    y_pred_real = denormalize(y_pred, target_mean, target_std)
-    y_true_real = denormalize(y_true, target_mean, target_std)
+def calculate_mean_absolute_error(y_true, y_pred, target_mean, target_std, norm_method):
+    y_pred_real = denormalize(y_pred, target_mean, target_std, norm_method)
+    y_true_real = denormalize(y_true, target_mean, target_std, norm_method)
     mae = np.float32(mean_absolute_error(y_true_real, y_pred_real))
     return mae
 
 
-def relative_mae_percentage(y_true, y_pred, target_mean, target_std):
-    y_pred_real = denormalize(y_pred, target_mean, target_std)
-    y_true_real = denormalize(y_true, target_mean, target_std)
+def relative_mae_percentage(y_true, y_pred, target_mean, target_std, norm_method):
+    y_pred_real = denormalize(y_pred, target_mean, target_std, norm_method)
+    y_true_real = denormalize(y_true, target_mean, target_std, norm_method)
 
     mae = np.float32(mean_absolute_error(y_true_real, y_pred_real))
     mean_target = np.mean(np.abs(y_true_real))
@@ -140,9 +151,9 @@ def relative_mae_percentage(y_true, y_pred, target_mean, target_std):
         return np.inf  # Prevent division by zero
     return (mae / mean_target) * 100
 
-def smape(y_true, y_pred, target_std, target_mean):
-    y_pred_real = denormalize(y_pred, target_mean, target_std)
-    y_true_real = denormalize(y_true, target_mean, target_std)
+def smape(y_true, y_pred, target_std, target_mean, norm_method):
+    y_pred_real = denormalize(y_pred, target_mean, target_std, norm_method)
+    y_true_real = denormalize(y_true, target_mean, target_std, norm_method)
     smape = np.mean(2 * np.abs(y_pred_real - y_true_real) / (np.abs(y_pred_real) + np.abs(y_true_real))) * 100
     return smape
 

@@ -64,11 +64,19 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
         plot_statistics=configs.PLOT_STATISTICS
     )
 
-    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN, debug=configs.DEBUG)
-    features_mean, features_std, targets_mean, targets_std = train_set.mean_features, train_set.std_features, train_set.mean_targets, train_set.std_targets
+    train_set = StoneDataset(train_df, target_column=configs.TARGET_COLUMN,
+                             partition_name="train",
+                             norm_method= configs.NORMALIZATION,
+    debug=configs.DEBUG)
+    features_mean, features_std, targets_mean, targets_std = (
+        train_set.mean_features, train_set.std_features, train_set.mean_targets, train_set.std_targets)
     train_loader = DataLoader(train_set, batch_size=configs.BATCH_SIZE,
                               shuffle=configs.SHUFFLE, generator=g)
-    val_set = StoneDataset(val_df, target_column=configs.TARGET_COLUMN)
+    val_set = StoneDataset(val_df, configs.TARGET_COLUMN,
+                           "val",
+                           features_mean, features_std, targets_mean, targets_std,
+                           norm_method=configs.NORMALIZATION
+                           )
     val_loader = DataLoader(val_set, batch_size=configs.BATCH_SIZE,
                             shuffle=configs.SHUFFLE, generator=g)
 
@@ -93,6 +101,7 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
         trainer = Trainer(model, optimizer, loss, tiny_loader, tiny_loader, run_dir,
                           targets_mean, targets_std,
                           n_best_checkpoints=configs.N_BEST_CHECKPOINTS,
+                          norm_method= configs.NORMALIZATION,
                           debug=configs.DEBUG)
         if configs.DEBUG:
             for x, y in tiny_loader:
@@ -103,6 +112,7 @@ def main(sweep_configs=None, user_configs=None, sweep=False):
     else:
         trainer = Trainer(model, optimizer, loss, train_loader, val_loader, run_dir,
                           targets_mean, targets_std,
+                          norm_method= configs.NORMALIZATION,
                           n_best_checkpoints=configs.N_BEST_CHECKPOINTS,
                           debug=configs.DEBUG)
 

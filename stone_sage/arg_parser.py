@@ -20,6 +20,8 @@ def get_args():
     parser.add_argument('--model', type=str, help="Model archetecture.")
     parser.add_argument('--sweep_name', type=str, default="default",
                         help="Name for the sweep run folder.")
+    parser.add_argument('--normalization', type=str, default=None,
+                        help="normalization method.")
     parser.add_argument('--sweep_path', type=str,
                         help="paht of sweep log file")
     args = parser.parse_args()

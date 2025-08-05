@@ -13,6 +13,7 @@ from stone_sage.datasets.dataset_utils import get_train_mean_and_std
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class Predictor:
     def __init__(self, user_configs):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -53,7 +54,6 @@ class Predictor:
             true_targets = part_df["true_values"].values
             predictions = part_df["prediction"].values
             if self.debug:
-
                 target_mean = true_targets.mean()
                 target_std = true_targets.std()
 
@@ -79,7 +79,6 @@ class Predictor:
             metrics[f"{partition}_rel_mae"] = rel_mae
             metrics[f"{partition}_smape"] = smape
 
-
         save_evaluation_summary(self.run_dir, metrics)
 
     def predict(self):
@@ -88,11 +87,19 @@ class Predictor:
         df = pd.read_csv(df_path)
 
         train_df = df[df["partition"] == "train"]
-        train_dataset = StoneDataset(train_df, target_column=self.configs.TARGET_COLUMN)
-        target_mean, target_std =  train_dataset.mean_targets, train_dataset.std_targets
+        train_dataset = StoneDataset(train_df, target_column=self.configs.TARGET_COLUMN,
+                                     partition_name="train",
+                                     norm_method=self.configs.NORMALIZATION)
+        features_mean, features_std, targets_mean, targets_std = (
+            train_dataset.mean_features, train_dataset.std_features,
+            train_dataset.mean_targets, train_dataset.std_targets)
 
-        dataset = StoneDataset(df, target_column=self.configs.TARGET_COLUMN)
-        loader = DataLoader(dataset, batch_size=self.configs.BATCH_SIZE, shuffle = False)
+        dataset = StoneDataset(df, self.configs.TARGET_COLUMN,
+                               "all",
+                               features_mean, features_std, targets_mean, targets_std,
+                               norm_method=self.configs.NORMALIZATION
+                               )
+        loader = DataLoader(dataset, batch_size=self.configs.BATCH_SIZE, shuffle=False)
 
         # Load model
         input_dim = dataset.input_dim  # from property
@@ -110,8 +117,10 @@ class Predictor:
                 all_targets.extend(targets.cpu().numpy().flatten())
 
         # # Denormalize
-        pred_vals = denormalize(all_preds,target_mean, target_std)
-        true_vals = denormalize(all_targets, target_mean, target_std)
+        pred_vals = denormalize(all_preds, targets_mean, targets_std,
+                                norm_method=self.configs.NORMALIZATION)
+        true_vals = denormalize(all_targets, targets_mean,targets_std,
+                                norm_method=self.configs.NORMALIZATION)
 
         if self.debug:
             raw_pred = all_preds[0]
@@ -125,9 +134,10 @@ class Predictor:
 
             mae_norm = mean_absolute_error([raw_pred], [raw_target])
             mae_denorm = mean_absolute_error([denorm_pred], [denorm_target])
+            # sanity check for linear normalization only
             print("MAE (normalized):", mae_norm)
-            print("Target std:", target_std)
-            print("Expected denorm MAE:", mae_norm * target_std)
+            print("Target std:", targets_std)
+            print("Expected denorm MAE:", mae_norm * targets_std)
             print("Actual denorm MAE:", mae_denorm)
 
         # pred_vals = all_preds
@@ -139,16 +149,16 @@ class Predictor:
         df["prediction"] = pred_vals
         df.to_csv(out_path, index=False)
         print(f"✅ Predictions saved to {out_path}")
-        self.calculate_evaluation_results(df, target_mean, target_std)
+        self.calculate_evaluation_results(df, targets_mean, targets_std)
 
-    def relative_mae_percentage(self,y_true, y_pred):
+    def relative_mae_percentage(self, y_true, y_pred):
         mae = mean_absolute_error(y_true, y_pred)
         mean_target = np.mean(np.abs(y_true))
         if mean_target == 0:
             return np.inf  # Prevent division by zero
         return (mae / mean_target) * 100
 
-    def smape(self,y_true, y_pred):
+    def smape(self, y_true, y_pred):
         smape = np.mean(2 * np.abs(y_pred - y_true) / (np.abs(y_pred) + np.abs(y_true))) * 100
         return smape
 

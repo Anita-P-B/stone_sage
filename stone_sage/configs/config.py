@@ -17,7 +17,7 @@ class Config:
         # General constants
         BATCH_SIZE=16,
         EPOCHS=200,
-        MODEL = "shallow_deep" , # set different options in the future
+        MODEL = "wide_shallow" , # set different options in the future
         N_BEST_CHECKPOINTS = 3, # number of best checkpoints to save
         LOSS = "mae",
         OPTIMIZER = "adam" ,
@@ -25,6 +25,7 @@ class Config:
         LEARNING_RATE=0.0005,
         SCHEDULER = True, # Set to False to disable learning rate scheduler
         DROPOUT = 0,
+        NORMALIZATION = "linear", # or "log", "none"
 
         # Scheduler Config
         MODE = "min",
@@ -55,7 +56,7 @@ class Config:
         self.CHECKSUM = CHECKSUM
         self.FORCE_DOWNLOAD = FORCE_DOWNLOAD
         self.PLOT_STATISTICS = PLOT_STATISTICS
-        self. TARGET_COLUMN =  TARGET_COLUMN
+        self.TARGET_COLUMN =  TARGET_COLUMN
         self.SHUFFLE  = SHUFFLE
 
         # Data split
@@ -74,6 +75,7 @@ class Config:
         self.LEARNING_RATE = LEARNING_RATE
         self.SCHEDULER = SCHEDULER
         self.DROPOUT = DROPOUT
+        self.NORMALIZATION = NORMALIZATION
 
         # Scheduler Config
         self.MODE = MODE

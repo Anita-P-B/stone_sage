@@ -13,7 +13,7 @@ import matplotlib.ticker as mticker
 
 class Trainer:
     def __init__(self, model, optimizer, loss, train_loader, val_loader, run_dir,
-                 target_mean, target_std,
+                 target_mean, target_std, norm_method,
                  scheduler=None, device=None,
                  n_best_checkpoints=3,
                  debug = False):
@@ -34,6 +34,7 @@ class Trainer:
 
         self.target_mean = target_mean
         self.target_std = target_std
+        self.norm_method = norm_method
 
         self.scheduler = scheduler
         self.best_loss = float("inf")
@@ -118,14 +119,19 @@ class Trainer:
             # train step
             train_loss, train_preds, train_targets = self._train_one_epoch(epoch, num_epochs)
             # Calculate metrics
-            train_mae = self.metrics["mae"](train_targets, train_preds, self.target_mean, self.target_std)
+            train_mae = self.metrics["mae"](train_targets, train_preds,
+                                            self.target_mean, self.target_std,
+                                            self.norm_method)
             train_rel_mae = self.metrics["rel_mae_percent"](train_targets, train_preds,
-                                                            self.target_mean, self.target_std)
+                                                            self.target_mean, self.target_std,
+                                                            self.norm_method)
             train_smape = self.metrics["smape"](train_targets, train_preds,
-                                                            self.target_mean, self.target_std)
+                                                            self.target_mean, self.target_std,
+                                                self.norm_method)
             if self.debug:
                 rel_mae_fn = self.metrics["rel_mae_percent"]
-                train_rel_mae = rel_mae_fn(train_targets, train_preds, self.target_mean, self.target_std)
+                train_rel_mae = rel_mae_fn(train_targets, train_preds, self.target_mean, self.target_std,
+                                           self.norm_method)
             print(
                 f"Epoch {epoch + 1} | Train Loss: {train_loss:.4f} | "
                 f"Train MAE: {train_mae:.4f} | Train smape: {train_smape:.2f}%"
@@ -134,11 +140,14 @@ class Trainer:
             val_loss, val_preds, val_targets = self._validate_one_epoch(epoch)
 
             # calculate validation metrics
-            val_mae = self.metrics["mae"](val_targets, val_preds, self.target_mean, self.target_std)
+            val_mae = self.metrics["mae"](val_targets, val_preds, self.target_mean, self.target_std,
+                                          self.norm_method)
             val_rel_mae = self.metrics["rel_mae_percent"](val_targets, val_preds,
-                                                          self.target_mean, self.target_std)
+                                                          self.target_mean, self.target_std,
+                                                          self.norm_method)
             val_smape = self.metrics["smape"](val_targets, val_preds,
-                                                          self.target_mean, self.target_std)
+                                                          self.target_mean, self.target_std,
+                                              self.norm_method)
 
             print(
                 f"Epoch {epoch + 1} | "
